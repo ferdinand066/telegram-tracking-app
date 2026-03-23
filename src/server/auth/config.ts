@@ -1,8 +1,8 @@
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import { type DefaultSession, type NextAuthConfig } from "next-auth";
 import DiscordProvider from "next-auth/providers/discord";
+import { SupabaseAdapter } from "@auth/supabase-adapter";
 
-import { db } from "~/server/db";
+import { env } from "~/env";
 
 /**
  * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
@@ -43,7 +43,19 @@ export const authConfig = {
      * @see https://next-auth.js.org/providers/github
      */
   ],
-  adapter: PrismaAdapter(db),
+  // adapter: (() => {
+  //   const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
+  //   if (!serviceRoleKey) {
+  //     throw new Error(
+  //       "Missing SUPABASE_SERVICE_ROLE_KEY. Required for Auth.js Supabase adapter.",
+  //     );
+  //   }
+
+  //   return SupabaseAdapter({
+  //     url: env.NEXT_PUBLIC_SUPABASE_URL,
+  //     secret: serviceRoleKey,
+  //   });
+  // })(),
   callbacks: {
     session: ({ session, user }) => ({
       ...session,

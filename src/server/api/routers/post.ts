@@ -17,22 +17,14 @@ export const postRouter = createTRPCRouter({
 
   create: protectedProcedure
     .input(z.object({ name: z.string().min(1) }))
-    .mutation(async ({ ctx, input }) => {
-      return ctx.db.post.create({
-        data: {
-          name: input.name,
-          createdBy: { connect: { id: ctx.session.user.id } },
-        },
-      });
+    .mutation(async ({ input }) => {
+      // Prisma removed for now; keep the endpoint shape so the UI compiles.
+      return { name: input.name };
     }),
 
-  getLatest: protectedProcedure.query(async ({ ctx }) => {
-    const post = await ctx.db.post.findFirst({
-      orderBy: { createdAt: "desc" },
-      where: { createdBy: { id: ctx.session.user.id } },
-    });
-
-    return post ?? null;
+  getLatest: protectedProcedure.query(async () => {
+    // No DB-backed implementation yet (Prisma removed). Returning `null` keeps the UI consistent.
+    return null as { name: string } | null;
   }),
 
   getSecretMessage: protectedProcedure.query(() => {
