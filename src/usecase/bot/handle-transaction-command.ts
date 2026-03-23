@@ -1,6 +1,7 @@
 import type { AppContext } from "~/lib/bot-context";
 import type { TransactionEntry, TransactionType } from "~/usecase/add-transaction.usecase";
 import { addTransactionUseCase, TRANSACTION_TYPE } from "~/usecase/add-transaction.usecase";
+import { parseAmount } from "~/utils/amount";
 import { parseHumanReadableDate } from "~/utils/date";
 
 // ─── Parsers ──────────────────────────────────────────────────────────────────
@@ -57,7 +58,7 @@ function parseTransactionCommand(text: string, sign: TransactionType): ParsedCom
       };
     }
 
-    const amount = parseFloat(parts[parts.length - 1]!.trim());
+    const amount = parseAmount(parts[parts.length - 1]!.trim());
     if (isNaN(amount) || amount <= 0) {
       return {
         ok: false,
