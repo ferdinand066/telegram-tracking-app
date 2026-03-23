@@ -13,7 +13,10 @@ export function formatAmount(amount: number): string {
 }
 
 function normalizeNumericString(s: string): string {
-  return s.replace(",", ".");
+  // A dot followed by exactly 3 digits (not preceded by more digits) = thousands separator → strip it
+  // Any other dot = decimal point → keep as-is
+  // Also accept comma as decimal separator
+  return s.replace(/\.(\d{3})(?!\d)/g, "$1").replace(",", ".");
 }
 
 export function parseAmount(raw: string): number {
