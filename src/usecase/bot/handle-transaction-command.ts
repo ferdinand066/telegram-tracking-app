@@ -1,6 +1,7 @@
 import type { AppContext } from "~/lib/bot-context";
 import type { TransactionEntry, TransactionType } from "~/usecase/add-transaction.usecase";
 import { addTransactionUseCase, TRANSACTION_TYPE } from "~/usecase/add-transaction.usecase";
+import { parseHumanReadableDate } from "~/utils/date";
 
 // ─── Parsers ──────────────────────────────────────────────────────────────────
 
@@ -8,18 +9,20 @@ type ParsedCommand =
   | { ok: true; dateStr: string; sourceName: string; entries: TransactionEntry[] }
   | { ok: false; errorMessage: string };
 
-function parseTransactionCommand(text: string): ParsedCommand {
+function parseTransactionCommand(text: string, sign: TransactionType): ParsedCommand {
   const lines = text
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean)
     .slice(1);
 
+  const command = sign === TRANSACTION_TYPE.INCOME ? "income" : "expense";
+
   if (lines.length < 2) {
     return {
       ok: false,
       errorMessage:
-        "Usage:\n/income\n<date> - <source>\n<category> - <description> - <amount>\n\nExample:\n/income\n2026-03-23 - BCA\nsalary - Monthly pay - 5000",
+        `Usage:\n/${command}\n<date> - <source>\n<category> - <description> - <amount>\n\nExample:\n/${command}\nToday - BCA\nsalary - Monthly pay - 5000`,
     };
   }
 
@@ -28,17 +31,18 @@ function parseTransactionCommand(text: string): ParsedCommand {
     return {
       ok: false,
       errorMessage:
-        "Invalid header. Line 2 must be: <date> - <source>\nExample: 2026-03-23 - BCA",
+        "Invalid header. Line 2 must be: <date> - <source>\nExample: Today - BCA",
     };
   }
 
-  const dateStr = headerMatch[1]!.trim();
+  const rawDate = headerMatch[1]!.trim();
   const sourceName = headerMatch[2]!.trim();
 
-  if (isNaN(new Date(dateStr).getTime())) {
+  const dateStr = parseHumanReadableDate(rawDate);
+  if (!dateStr) {
     return {
       ok: false,
-      errorMessage: `Invalid date "${dateStr}". Use YYYY-MM-DD format.`,
+      errorMessage: `Invalid date "${rawDate}".\nAccepted formats: Today, Yesterday, 28 Feb, 28 Feb 2025`,
     };
   }
 
@@ -87,7 +91,7 @@ function formatReply(
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 async function handleTransactionCommand(ctx: AppContext, sign: TransactionType) {
-  const parsed = parseTransactionCommand(ctx.message?.text ?? "");
+  const parsed = parseTransactionCommand(ctx.message?.text ?? "", sign);
   if (!parsed.ok) return ctx.reply(parsed.errorMessage);
 
   if (!ctx.user) return ctx.reply("Failed to identify user. Please try again.");
