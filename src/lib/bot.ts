@@ -2,7 +2,7 @@ import "server-only";
 import { Bot } from "grammy";
 import { env } from "../env.js";
 import { supabaseServer } from "./supabase/server";
-import type { Transaction, User } from "./supabase/types";
+import type { FundSource, Transaction, User } from "./supabase/types";
 
 export const bot = new Bot(env.TELEGRAM_BOT_TOKEN);
 
@@ -43,9 +43,28 @@ async function upsertUser(
   return result.data;
 }
 
-function todayIso(): string {
-  return new Date().toISOString().split("T")[0]!;
+
+async function getActiveFundSourceByName(
+  userId: number,
+  name: string,
+) {
+  const { data, error } = await supabaseServer
+    .from("fund_sources")
+    .select()
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .ilike("name", name)
+    .order("created_at", { ascending: false })
+    .single<FundSource>();
+
+  if (error) {
+    console.error("getActiveFundSourceByName select error:", error);
+    return null;
+  }
+
+  return data ?? null;
 }
+
 
 // ─── /start ──────────────────────────────────────────────────────────────────
 
@@ -56,11 +75,24 @@ bot.command("start", async (ctx) => {
     `👋 Welcome to your *Financial Tracker*!\n\n` +
       `Here are the commands you can use:\n\n` +
       `💰 *Add income:*\n` +
-      `/income <amount> <category> [description]\n` +
-      `_Example: /income 5000 salary Monthly pay_\n\n` +
+      `/income\n` +
+      `<date> \\- <source>\n` +
+      `<category> \\- <description> \\- <amount>\n` +
+      `_Example:_\n` +
+      `_/income_\n` +
+      `_2026\\-03\\-23 \\- BCA_\n` +
+      `_salary \\- Monthly pay \\- 5000_\n\n` +
       `💸 *Add expense:*\n` +
-      `/expense <amount> <category> [description]\n` +
-      `_Example: /expense 50 food Lunch_\n\n` +
+      `/expense\n` +
+      `<date> \\- <source>\n` +
+      `<category> \\- <description> \\- <amount>\n` +
+      `_Example:_\n` +
+      `_/expense_\n` +
+      `_2026\\-03\\-23 \\- BCA_\n` +
+      `_food \\- Lunch \\- 50_\n\n` +
+      `📦 *Create fund source:*\n` +
+      `/source <name> - <detail>\n` +
+      `_Example: /source BCA - 531xxxxxx_\n\n` +
       `📊 *Check balance:*\n` +
       `/balance\n\n` +
       `📋 *View recent transactions:*\n` +
@@ -76,28 +108,97 @@ bot.command("start", async (ctx) => {
 bot.command("help", (ctx) =>
   ctx.reply(
     `*Available Commands*\n\n` +
-      `/income <amount> <category> [description]\n` +
-      `/expense <amount> <category> [description]\n` +
-      `/balance — show total income, expenses, and net balance\n` +
-      `/history — show your last 10 transactions\n\n` +
-      `*Amount* should be a positive number (e.g. \`150\` or \`3.50\`).`,
+      `*/income* — add income transactions\n` +
+      `Format:\n` +
+      `/income\n` +
+      `<date> - <source>\n` +
+      `<category> - <description> - <amount>\n\n` +
+      `*/expense* — add expense transactions\n` +
+      `Format:\n` +
+      `/expense\n` +
+      `<date> - <source>\n` +
+      `<category> - <description> - <amount>\n\n` +
+      `*/source* <name> - <detail> — create a fund source\n` +
+      `*/balance* — total income, expenses & net balance\n` +
+      `*/history* — last 10 transactions\n\n` +
+      `Amount must be a positive number (e.g. \`150\` or \`3.50\`).`,
     { parse_mode: "Markdown" },
   ),
 );
 
-// ─── /income ─────────────────────────────────────────────────────────────────
+// ─── /source ──────────────────────────────────────────────────────────────
 
-bot.command("income", async (ctx) => {
-  const parts = ctx.message?.text?.split(" ").slice(1) ?? [];
-  if (parts.length < 2) {
+bot.command("source", async (ctx) => {
+  const text = ctx.message?.text ?? "";
+  const argText = text.replace(/^\/source\s*/i, "").trim();
+
+  const match = /^(.*?)\s*-\s*(.*)$/i.exec(argText);
+  if (!match) {
     return ctx.reply(
-      "Usage: /income <amount> <category> [description]\nExample: /income 5000 salary Monthly pay",
+      "Usage: /source <name> - <detail>\nExample: /source BCA - 531xxxxxx",
     );
   }
 
-  const amount = parseFloat(parts[0] ?? "");
-  if (isNaN(amount) || amount <= 0) {
-    return ctx.reply("Amount must be a positive number.");
+  const name = match[1]!.trim();
+  if (!name) return ctx.reply("Source name is required.");
+
+  // detail can be empty, e.g. "/source BCA -"
+  const detailTrimmed = match[2]!.trim();
+  const detail = detailTrimmed.length > 0 ? detailTrimmed : null;
+
+  const user = await upsertUser(
+    ctx.from!.id,
+    ctx.from!.username,
+    ctx.from!.first_name,
+  );
+  if (!user) return ctx.reply("Failed to identify user. Please try again.");
+
+  const { error } = await supabaseServer.from("fund_sources").insert({
+    user_id: user.id,
+    name,
+    detail,
+    // `is_active` defaults to `true` in the DB.
+  });
+
+  if (error) {
+    console.error("Supabase insert error:", error);
+    return ctx.reply("Failed to save source. Please try again.");
+  }
+
+  return ctx.reply(
+    `✅ Fund source created!\n\n📌 *${name}*${detail ? `\n📝 ${detail}` : ""}`,
+    { parse_mode: "Markdown" },
+  );
+});
+
+// ─── /income ─────────────────────────────────────────────────────────────────
+
+bot.command("income", async (ctx) => {
+  const text = ctx.message?.text ?? "";
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .slice(1); // drop the "/income" line
+
+  if (lines.length < 2) {
+    return ctx.reply(
+      "Usage:\n/income\n<date> - <source>\n<category> - <description> - <amount>\n\nExample:\n/income\n2026-03-23 - BCA\nsalary - Monthly pay - 5000",
+    );
+  }
+
+  const headerMatch = /^(.+?)\s+-\s+(.+)$/.exec(lines[0]!);
+  if (!headerMatch) {
+    return ctx.reply(
+      "Invalid header. Line 2 must be: <date> - <source>\nExample: 2026-03-23 - BCA",
+    );
+  }
+
+  const dateStr = headerMatch[1]!.trim();
+  const sourceName = headerMatch[2]!.trim();
+
+  if (isNaN(new Date(dateStr).getTime())) {
+    return ctx.reply(`Invalid date "${dateStr}". Use YYYY-MM-DD format.`);
   }
 
   const user = await upsertUser(
@@ -107,42 +208,92 @@ bot.command("income", async (ctx) => {
   );
   if (!user) return ctx.reply("Failed to identify user. Please try again.");
 
-  const category = parts[1] ?? "other";
-  const description = parts.slice(2).join(" ") || null;
+  const source = await getActiveFundSourceByName(user.id, sourceName);
+  if (!source) {
+    return ctx.reply(
+      `Fund source "${sourceName}" not found or inactive.\nCreate it first with /source ${sourceName} - <detail>`,
+    );
+  }
 
-  const { error } = await supabaseServer.from("transactions").insert({
-    user_id: user.id,
-    transaction_date: todayIso(),
-    amount,
-    category,
-    description,
-    telegram_message_id: ctx.message?.message_id ?? null,
-  });
+  type ParsedTx = { category: string; description: string | null; amount: number };
+  const transactions: ParsedTx[] = [];
+
+  for (const line of lines.slice(1)) {
+    const parts = line.split(" - ");
+    if (parts.length < 2) {
+      return ctx.reply(
+        `Invalid transaction line: "${line}"\nFormat: <category> - <description> - <amount>`,
+      );
+    }
+
+    const amount = parseFloat(parts[parts.length - 1]!.trim());
+    if (isNaN(amount) || amount <= 0) {
+      return ctx.reply(
+        `Invalid amount in line: "${line}"\nAmount must be a positive number.`,
+      );
+    }
+
+    const category = parts[0]!.trim() || "other";
+    const description =
+      parts.length > 2 ? parts.slice(1, -1).join(" - ").trim() || null : null;
+
+    transactions.push({ category, description, amount });
+  }
+
+  const { error } = await supabaseServer.from("transactions").insert(
+    transactions.map((t) => ({
+      user_id: user.id,
+      fund_source_id: source.id,
+      transaction_date: dateStr,
+      amount: t.amount,
+      category: t.category,
+      description: t.description,
+      telegram_message_id: ctx.message?.message_id ?? null,
+    })),
+  );
 
   if (error) {
     console.error("Supabase insert error:", error);
-    return ctx.reply("Failed to save transaction. Please try again.");
+    return ctx.reply("Failed to save transactions. Please try again.");
   }
 
-  return ctx.reply(
-    `✅ Income recorded!\n\n💰 *+${amount}* — ${category}${description ? `\n📝 ${description}` : ""}`,
-    { parse_mode: "Markdown" },
+  const replyLines = transactions.map((t) =>
+    t.description
+      ? `${t.category} - ${t.description} - ${t.amount.toFixed(2)}`
+      : `${t.category} - ${t.amount.toFixed(2)}`,
   );
+
+  return ctx.reply([`${dateStr} - ${source.name}`, ...replyLines].join("\n"));
 });
 
 // ─── /expense ────────────────────────────────────────────────────────────────
 
 bot.command("expense", async (ctx) => {
-  const parts = ctx.message?.text?.split(" ").slice(1) ?? [];
-  if (parts.length < 2) {
+  const text = ctx.message?.text ?? "";
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .slice(1); // drop the "/expense" line
+
+  if (lines.length < 2) {
     return ctx.reply(
-      "Usage: /expense <amount> <category> [description]\nExample: /expense 50 food Lunch",
+      "Usage:\n/expense\n<date> - <source>\n<category> - <description> - <amount>\n\nExample:\n/expense\n2026-03-23 - BCA\nfood - Lunch - 50",
     );
   }
 
-  const amount = parseFloat(parts[0] ?? "");
-  if (isNaN(amount) || amount <= 0) {
-    return ctx.reply("Amount must be a positive number.");
+  const headerMatch = /^(.+?)\s+-\s+(.+)$/.exec(lines[0]!);
+  if (!headerMatch) {
+    return ctx.reply(
+      "Invalid header. Line 2 must be: <date> - <source>\nExample: 2026-03-23 - BCA",
+    );
+  }
+
+  const dateStr = headerMatch[1]!.trim();
+  const sourceName = headerMatch[2]!.trim();
+
+  if (isNaN(new Date(dateStr).getTime())) {
+    return ctx.reply(`Invalid date "${dateStr}". Use YYYY-MM-DD format.`);
   }
 
   const user = await upsertUser(
@@ -152,27 +303,62 @@ bot.command("expense", async (ctx) => {
   );
   if (!user) return ctx.reply("Failed to identify user. Please try again.");
 
-  const category = parts[1] ?? "other";
-  const description = parts.slice(2).join(" ") || null;
+  const source = await getActiveFundSourceByName(user.id, sourceName);
+  if (!source) {
+    return ctx.reply(
+      `Fund source "${sourceName}" not found or inactive.\nCreate it first with /source ${sourceName} - <detail>`,
+    );
+  }
 
-  const { error } = await supabaseServer.from("transactions").insert({
-    user_id: user.id,
-    transaction_date: todayIso(),
-    amount: -amount,
-    category,
-    description,
-    telegram_message_id: ctx.message?.message_id ?? null,
-  });
+  type ParsedTx = { category: string; description: string | null; amount: number };
+  const transactions: ParsedTx[] = [];
+
+  for (const line of lines.slice(1)) {
+    const parts = line.split(" - ");
+    if (parts.length < 2) {
+      return ctx.reply(
+        `Invalid transaction line: "${line}"\nFormat: <category> - <description> - <amount>`,
+      );
+    }
+
+    const amount = parseFloat(parts[parts.length - 1]!.trim());
+    if (isNaN(amount) || amount <= 0) {
+      return ctx.reply(
+        `Invalid amount in line: "${line}"\nAmount must be a positive number.`,
+      );
+    }
+
+    const category = parts[0]!.trim() || "other";
+    const description =
+      parts.length > 2 ? parts.slice(1, -1).join(" - ").trim() || null : null;
+
+    transactions.push({ category, description, amount });
+  }
+
+  const { error } = await supabaseServer.from("transactions").insert(
+    transactions.map((t) => ({
+      user_id: user.id,
+      fund_source_id: source.id,
+      transaction_date: dateStr,
+      amount: -t.amount,
+      category: t.category,
+      description: t.description,
+      telegram_message_id: ctx.message?.message_id ?? null,
+    })),
+  );
 
   if (error) {
     console.error("Supabase insert error:", error);
-    return ctx.reply("Failed to save transaction. Please try again.");
+    return ctx.reply("Failed to save transactions. Please try again.");
   }
 
-  return ctx.reply(
-    `✅ Expense recorded!\n\n💸 *-${amount}* — ${category}${description ? `\n📝 ${description}` : ""}`,
-    { parse_mode: "Markdown" },
+  const replyLines = transactions.map((t) =>
+    t.description
+      ? `${t.category} - ${t.description} - ${t.amount.toFixed(2)}`
+      : `${t.category} - ${t.amount.toFixed(2)}`,
   );
+
+  return ctx.reply([`${dateStr} - ${source.name}`, ...replyLines].join("\n"));
 });
 
 // ─── /balance ────────────────────────────────────────────────────────────────
