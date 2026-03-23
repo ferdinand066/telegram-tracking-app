@@ -3,7 +3,7 @@ import customParseFormat from "dayjs/plugin/customParseFormat";
 
 dayjs.extend(customParseFormat);
 
-const HUMAN_READABLE_DATE_FORMATS = {
+export const HUMAN_READABLE_DATE_FORMATS = {
   STANDARD: "YYYY-MM-DD",
   DAY_MONTH: "D MMM",
   DAY_MONTH_YEAR: "D MMM YYYY",

@@ -16,7 +16,7 @@ export function handleHelpCommand(ctx: AppContext) {
       `*/source* <name> - <detail> — Create a fund source\n` +
       `*/balance* — Total income, expenses & net balance\n` +
       `*/history* — Last 10 transactions\n\n` +
-      `Amount must be a positive number (e.g. \`150\` or \`3.50\`).`,
+      `Amount must be a positive number (e.g. \`150.000\` or \`15k\`).`,
     { parse_mode: "Markdown" },
   );
 }

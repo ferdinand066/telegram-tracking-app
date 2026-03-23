@@ -3,6 +3,15 @@ const SUFFIX_MULTIPLIERS: Record<string, number> = {
   jt: 1_000_000,
 };
 
+const ptBrAmountFormatter = new Intl.NumberFormat("pt-BR", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+export function formatAmount(amount: number): string {
+  return ptBrAmountFormatter.format(amount);
+}
+
 export function parseAmount(raw: string): number {
   const normalized = raw.trim().toLowerCase();
 

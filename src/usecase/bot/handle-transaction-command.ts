@@ -1,8 +1,9 @@
+import dayjs from "dayjs";
 import type { AppContext } from "~/lib/bot-context";
 import type { TransactionEntry, TransactionType } from "~/usecase/add-transaction.usecase";
 import { addTransactionUseCase, TRANSACTION_TYPE } from "~/usecase/add-transaction.usecase";
-import { parseAmount } from "~/utils/amount";
-import { parseHumanReadableDate } from "~/utils/date";
+import { formatAmount, parseAmount } from "~/utils/amount";
+import { HUMAN_READABLE_DATE_FORMATS, parseHumanReadableDate } from "~/utils/date";
 
 // ─── Parsers ──────────────────────────────────────────────────────────────────
 
@@ -81,12 +82,14 @@ function formatReply(
   sourceName: string,
   entries: TransactionEntry[],
 ): string {
+  const parsedDate = dayjs(dateStr).format(HUMAN_READABLE_DATE_FORMATS.DAY_MONTH_YEAR);
+
   const lines = entries.map((e) =>
     e.description
-      ? `${e.category} - ${e.description} - ${e.amount.toFixed(2)}`
-      : `${e.category} - ${e.amount.toFixed(2)}`,
+      ? `${e.category} - ${e.description} - ${formatAmount(e.amount)}`
+      : `${e.category} - ${formatAmount(e.amount)}`,
   );
-  return [`${dateStr} - ${sourceName}`, ...lines].join("\n");
+  return [`${parsedDate} - ${sourceName}`, ...lines].join("\n");
 }
 
 // ─── Handler ──────────────────────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 import type { AppContext } from "~/lib/bot-context";
 import { getHistoryUseCase } from "~/usecase/get-history.usecase";
 import type { Transaction } from "~/lib/supabase/model";
+import { formatAmount } from "~/utils/amount";
 
 function formatTransactionLine(t: Transaction): string {
   const isIncome = t.amount >= 0;
@@ -12,7 +13,7 @@ function formatTransactionLine(t: Transaction): string {
   });
   const desc = t.description ? ` — ${t.description}` : "";
   const cat = t.category ?? "uncategorized";
-  return `${emoji} \`${sign}${Number(t.amount).toFixed(2)}\` *${cat}*${desc} _(${date})_`;
+  return `${emoji} \`${sign}${formatAmount(Number(t.amount))}\` *${cat}*${desc} _(${date})_`;
 }
 
 export async function handleHistoryCommand(ctx: AppContext) {
