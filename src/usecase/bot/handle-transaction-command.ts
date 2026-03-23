@@ -24,7 +24,7 @@ function parseTransactionCommand(text: string, sign: TransactionType): ParsedCom
     return {
       ok: false,
       errorMessage:
-        `Usage:\n/${command}\n<date> - <category> - <source>\n<description> - <amount>\n\n<amount> formats:\n- 5000 (plain number)\n- 5.000 (dot as thousands)\n- 2k / 2K (k = 1,000)\n- 3jt / 3JT (jt = 1,000,000)\n\nExample:\n/${command}\nToday - salary - BCA\nMonthly pay - 5.000`,
+        `Usage:\n/${command}\n<date> - <category> - <source>\n<description> - <amount>\n\n<amount> formats:\n- 5000 (plain number)\n- 2k / 2K (k = 1,000)\n- 3jt / 3JT (jt = 1,000,000)\n- 15.2k = 15,200 | 17.5jt = 17,500,000\n\nExample:\n/${command}\nToday - salary - BCA\nMonthly pay - 5000`,
     };
   }
 

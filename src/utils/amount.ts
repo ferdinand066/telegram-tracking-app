@@ -12,15 +12,19 @@ export function formatAmount(amount: number): string {
   return ptBrAmountFormatter.format(amount);
 }
 
+function normalizeNumericString(s: string): string {
+  return s.replace(",", ".");
+}
+
 export function parseAmount(raw: string): number {
   const normalized = raw.trim().toLowerCase();
 
   for (const [suffix, multiplier] of Object.entries(SUFFIX_MULTIPLIERS)) {
     if (normalized.endsWith(suffix)) {
-      const numeric = normalized.slice(0, -suffix.length).replace(/\./g, "");
+      const numeric = normalizeNumericString(normalized.slice(0, -suffix.length));
       return parseFloat(numeric) * multiplier;
     }
   }
 
-  return parseFloat(normalized.replace(/\./g, ""));
+  return parseFloat(normalizeNumericString(normalized));
 }
