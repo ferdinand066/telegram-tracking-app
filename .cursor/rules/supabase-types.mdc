@@ -1,0 +1,37 @@
+---
+description: Supabase type conventions — always import models from types.ts
+globs: src/**/*.ts
+alwaysApply: false
+---
+
+# Supabase Types
+
+All Supabase models are defined in `src/lib/supabase/types.ts`.
+
+## Available Types
+
+| Type | Table |
+|---|---|
+| `User` | `users` |
+| `FundSource` | `fund_sources` |
+| `Transaction` | `transactions` |
+| `FundSourceBalance` | `fund_source_balances` |
+| `Database` | Full typed DB schema for `supabase-js` |
+
+## Rules
+
+- **Always** import domain types from `src/lib/supabase/types.ts` — never redefine them
+- Use `Database['public']['Tables']['<table>']['Insert']` for insert payloads
+- Use `Database['public']['Tables']['<table>']['Update']` for update payloads
+- Use the `Row` type (or its alias e.g. `Transaction`) for query return values
+
+```typescript
+// ❌ BAD — redefining types that already exist
+type Transaction = { id: string; amount: number; ... };
+
+// ✅ GOOD — import from the single source of truth
+import type { Transaction, FundSource } from '~/lib/supabase/types';
+import type { Database } from '~/lib/supabase/types';
+
+type InsertTransaction = Database['public']['Tables']['transactions']['Insert'];
+```

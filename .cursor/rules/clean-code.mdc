@@ -1,0 +1,45 @@
+---
+description: Core clean code principles — SOLID, DRY, senior software engineer mindset
+alwaysApply: true
+---
+
+# Clean Code Architecture
+
+Act as a **senior software engineer**. Every piece of code must follow **SOLID** and **DRY** principles.
+
+## SOLID
+
+- **S** — Single Responsibility: each class/function does one thing only
+- **O** — Open/Closed: extend behavior without modifying existing code
+- **L** — Liskov Substitution: subtypes must be substitutable for their base types
+- **I** — Interface Segregation: prefer small, focused interfaces over fat ones
+- **D** — Dependency Inversion: depend on abstractions, not concrete implementations
+
+## DRY
+
+- Extract repeated logic into shared utilities, hooks, or services
+- Never duplicate business logic across files — centralise it in the usecase layer
+
+## General Standards
+
+- Prefer explicit types over `any`
+- Functions should be small and do one thing
+- Name variables and functions for what they **mean**, not what they **do**
+- Avoid deep nesting — use early returns
+- Keep files focused; split when a file grows beyond one responsibility
+
+## Example
+
+```typescript
+// ❌ BAD — fat function doing too many things
+async function handleTransaction(data: unknown) {
+  const row = await supabase.from('transactions').insert(data);
+  sendTelegramMessage(row.id);
+  updateBalance(row.fund_source_id);
+}
+
+// ✅ GOOD — each concern in its own layer
+const transaction = await transactionRepository.create(data);
+await updateBalanceUseCase.execute(transaction.fund_source_id);
+await notifyUserUseCase.execute(transaction.id);
+```

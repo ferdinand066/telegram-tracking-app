@@ -1,7 +1,7 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { env } from "~/env";
-import { type Database } from "./types";
+import type { Database } from "./types";
 
 /**
  * Server-side Supabase client. Use this in API routes, server components,
