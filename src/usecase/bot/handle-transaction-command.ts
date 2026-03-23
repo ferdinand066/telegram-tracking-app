@@ -24,21 +24,22 @@ function parseTransactionCommand(text: string, sign: TransactionType): ParsedCom
     return {
       ok: false,
       errorMessage:
-        `Usage:\n/${command}\n<date> - <source>\n<category> - <description> - <amount>\n\nExample:\n/${command}\nToday - BCA\nsalary - Monthly pay - 5000`,
+        `Usage:\n/${command}\n<date> - <category> - <source>\n<description> - <amount>\n\n<amount> formats:\n- 5000 (plain number)\n- 5.000 (dot as thousands)\n- 2k / 2K (k = 1,000)\n- 3jt / 3JT (jt = 1,000,000)\n\nExample:\n/${command}\nToday - salary - BCA\nMonthly pay - 5.000`,
     };
   }
 
-  const headerMatch = /^(.+?)\s+-\s+(.+)$/.exec(lines[0]!);
-  if (!headerMatch) {
+  const headerParts = lines[0]!.split(" - ").map((p) => p.trim());
+  if (headerParts.length < 3) {
     return {
       ok: false,
       errorMessage:
-        "Invalid header. Line 2 must be: <date> - <source>\nExample: Today - BCA",
+        "Invalid header. Line 2 must be: <date> - <category> - <source>\nExample: Today - salary - BCA",
     };
   }
 
-  const rawDate = headerMatch[1]!.trim();
-  const sourceName = headerMatch[2]!.trim();
+  const rawDate = headerParts[0]!;
+  const category = headerParts[1]!;
+  const sourceName = headerParts.slice(2).join(" - ");
 
   const dateStr = parseHumanReadableDate(rawDate);
   if (!dateStr) {
@@ -52,10 +53,10 @@ function parseTransactionCommand(text: string, sign: TransactionType): ParsedCom
 
   for (const line of lines.slice(1)) {
     const parts = line.split(" - ");
-    if (parts.length < 2) {
+    if (parts.length < 1) {
       return {
         ok: false,
-        errorMessage: `Invalid transaction line: "${line}"\nFormat: <category> - <description> - <amount>`,
+        errorMessage: `Invalid transaction line: "${line}"\nFormat: <description> - <amount>`,
       };
     }
 
@@ -63,13 +64,13 @@ function parseTransactionCommand(text: string, sign: TransactionType): ParsedCom
     if (isNaN(amount) || amount <= 0) {
       return {
         ok: false,
-        errorMessage: `Invalid amount in line: "${line}"\nAmount must be a positive number.`,
+        errorMessage:
+          `Invalid amount in line: "${line}"\nAmount must be a positive number.\nSupported: 5000, 5.000, 2k/2K, 3jt/3JT`,
       };
     }
 
-    const category = parts[0]!.trim() || "other";
     const description =
-      parts.length > 2 ? parts.slice(1, -1).join(" - ").trim() || null : null;
+      parts.length > 1 ? parts.slice(0, -1).join(" - ").trim() || null : null;
 
     entries.push({ category, description, amount });
   }
@@ -83,13 +84,14 @@ function formatReply(
   entries: TransactionEntry[],
 ): string {
   const parsedDate = dayjs(dateStr).format(HUMAN_READABLE_DATE_FORMATS.DAY_MONTH_YEAR);
+  const category = entries[0]?.category ?? "other";
 
   const lines = entries.map((e) =>
     e.description
-      ? `${e.category} - ${e.description} - ${formatAmount(e.amount)}`
-      : `${e.category} - ${formatAmount(e.amount)}`,
+      ? `${e.description} - ${formatAmount(e.amount)}`
+      : formatAmount(e.amount),
   );
-  return [`${parsedDate} - ${sourceName}`, ...lines].join("\n");
+  return [`${parsedDate} - ${category} - ${sourceName}`, ...lines].join("\n");
 }
 
 // ─── Handler ──────────────────────────────────────────────────────────────────

@@ -14,27 +14,29 @@ export async function handleBalanceCommand(ctx: AppContext) {
     const netStr = `${netSign}${formatAmount(net)}`;
 
     const labelRows = [
-      { label: "Total Income", value: incomeStr },
-      { label: "Total Expenses", value: expenseStr },
-      { label: "Net Balance", value: netStr },
+      { label: "💰 Total Income:", value: incomeStr },
+      { label: "💸 Total Expenses:", value: expenseStr },
+      { label: "📈 Net Balance:", value: netStr },
     ] as const;
 
-    // Use a monospaced code block + padding so the value column aligns right.
+    // Use inline code per row (not a ``` code block) so Telegram doesn't show the code badge.
     const leftWidth = Math.max(...labelRows.map((row) => row.label.length));
     const rightWidth = Math.max(...labelRows.map((row) => row.value.length));
     const formatRow = (label: string, value: string) =>
       `${label.padEnd(leftWidth)}  ${value.padStart(rightWidth)}`;
 
-    const table =
+    const line1 = formatRow(labelRows[0].label, labelRows[0].value);
+    const line2 = formatRow(labelRows[1].label, labelRows[1].value);
+    const line3 = formatRow(labelRows[2].label, labelRows[2].value);
+
+    const alignedText =
+      `\`${line1}\`\n` +
+      `\`${line2}\`\n` +
       `━━━━━━━━━━━━━━\n` +
-      `${formatRow(labelRows[0].label, labelRows[0].value)}\n` +
-      `${formatRow(labelRows[1].label, labelRows[1].value)}\n` +
-      `━━━━━━━━━━━━━━\n` +
-      `${formatRow(labelRows[2].label, labelRows[2].value)}`;
+      `\`${line3}\``;
 
     return ctx.reply(
-      `📊 *Your Balance* (${ctx.user.currency})\n\n` +
-        `\`\`\`\n${table}\n\`\`\``,
+      `📊 *Your Balance* (${ctx.user.currency})\n\n${alignedText}`,
       { parse_mode: "Markdown" },
     );
   } catch {
