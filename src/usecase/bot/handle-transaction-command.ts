@@ -1,6 +1,6 @@
 import type { AppContext } from "~/lib/bot-context";
-import { addTransactionUseCase } from "~/usecase/add-transaction.usecase";
-import type { TransactionEntry } from "~/usecase/add-transaction.usecase";
+import type { TransactionEntry, TransactionType } from "~/usecase/add-transaction.usecase";
+import { addTransactionUseCase, TRANSACTION_TYPE } from "~/usecase/add-transaction.usecase";
 
 // ─── Parsers ──────────────────────────────────────────────────────────────────
 
@@ -86,7 +86,7 @@ function formatReply(
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
-async function handleTransactionCommand(ctx: AppContext, sign: 1 | -1) {
+async function handleTransactionCommand(ctx: AppContext, sign: TransactionType) {
   const parsed = parseTransactionCommand(ctx.message?.text ?? "");
   if (!parsed.ok) return ctx.reply(parsed.errorMessage);
 
@@ -111,7 +111,7 @@ async function handleTransactionCommand(ctx: AppContext, sign: 1 | -1) {
 }
 
 export const handleIncomeCommand = (ctx: AppContext) =>
-  handleTransactionCommand(ctx, 1);
+  handleTransactionCommand(ctx, TRANSACTION_TYPE.INCOME);
 
 export const handleExpenseCommand = (ctx: AppContext) =>
-  handleTransactionCommand(ctx, -1);
+  handleTransactionCommand(ctx, TRANSACTION_TYPE.EXPENSE);

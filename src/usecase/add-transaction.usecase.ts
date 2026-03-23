@@ -8,13 +8,19 @@ export type TransactionEntry = {
   amount: number;
 };
 
+export const TRANSACTION_TYPE = {
+  INCOME: 1,
+  EXPENSE: -1,
+} as const;
+
+export type TransactionType = (typeof TRANSACTION_TYPE)[keyof typeof TRANSACTION_TYPE];
+
 type AddTransactionInput = {
   userId: number;
   fundSourceName: string;
   dateStr: string;
   entries: TransactionEntry[];
-  /** +1 for income, -1 for expense */
-  sign: 1 | -1;
+  sign: TransactionType;
   telegramMessageId: number | null;
 };
 
