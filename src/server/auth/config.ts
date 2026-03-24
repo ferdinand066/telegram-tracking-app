@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import DiscordProvider from "next-auth/providers/discord";
 
 import { env } from "~/env.js";
+import { userRepository } from "~/repository/user.repository";
 import { getDevLoginUserUseCase } from "~/usecase/auth/get-dev-login-user.usecase";
 
 import {
@@ -86,16 +87,30 @@ export const authConfig = {
           return null;
         }
 
+        const telegramId = Number(id);
+        if (!Number.isInteger(telegramId) || telegramId <= 0) {
+          return null;
+        }
+
+        const appUser = await userRepository.upsert(
+          telegramId,
+          username ?? undefined,
+          first_name,
+        );
+        if (!appUser) {
+          return null;
+        }
+
         const joined = [first_name, last_name ?? ""].filter(Boolean).join(" ");
         const name =
           joined !== ""
             ? joined
-            : username != null && username !== ""
+            : username !== null && username !== ""
               ? username
               : `Telegram ${id}`;
 
         return {
-          id: `telegram:${id}`,
+          id: `telegram:${appUser.id}`,
           name,
           image: photo_url ?? undefined,
           username: username ?? null,
