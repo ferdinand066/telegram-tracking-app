@@ -27,8 +27,18 @@ declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
       id: string;
+      username?: string | null;
     } & DefaultSession["user"];
   }
+}
+
+function extractUsername(candidate: unknown): string | null {
+  if (typeof candidate !== "object" || candidate == null) {
+    return null;
+  }
+
+  const username = (candidate as { username?: unknown }).username;
+  return typeof username === "string" && username.length > 0 ? username : null;
 }
 
 export const authConfig = {
@@ -88,6 +98,7 @@ export const authConfig = {
           id: `telegram:${id}`,
           name,
           image: photo_url ?? undefined,
+          username: username ?? null,
         };
       },
     }),
@@ -115,6 +126,7 @@ export const authConfig = {
         return {
           id: `dev:${user.id}`,
           name: user.username ?? user.first_name ?? username,
+          username: user.username ?? null,
         };
       },
     }),
@@ -124,6 +136,10 @@ export const authConfig = {
     jwt({ token, user }) {
       if (user?.id) {
         token.id = user.id;
+      }
+      const username = extractUsername(user);
+      if (username !== null) {
+        token.username = username;
       }
       return token;
     },
@@ -137,6 +153,7 @@ export const authConfig = {
         user: {
           ...session.user,
           id,
+          username: token.username ?? null,
         },
       };
     },

@@ -7,7 +7,6 @@ import { TelegramLoginWidget } from "~/components/pages/login/telegram-login-wid
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { env } from "~/env";
 import { auth } from "~/server/auth";
-import HomeLink from "../../components/pages/login/home-link";
 
 export const metadata: Metadata = {
   title: "Sign in · Fund Tracker",
@@ -54,10 +53,6 @@ export default async function LoginPage() {
             <TelegramLoginWidget botUsername={botUsername} />
           </Suspense>
         )}
-
-        <div className="mt-8 flex justify-center sm:justify-start">
-          <HomeLink />
-        </div>
       </div>
     </main>
   );
