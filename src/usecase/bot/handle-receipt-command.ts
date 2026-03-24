@@ -38,7 +38,12 @@ export const handleReceiptCommand = async (ctx: AppContext) => {
     );
   }
 
-  pendingReceiptPhotoStore.set(ctx.user.id, { dateStr, sourceName, category });
+  pendingReceiptPhotoStore.set(ctx.user.id, {
+    dateStr,
+    sourceName,
+    category,
+    isProcessing: false,
+  });
 
   return ctx.reply("Got it! Now send me the receipt photo.");
 };

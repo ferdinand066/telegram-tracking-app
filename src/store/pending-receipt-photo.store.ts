@@ -2,6 +2,7 @@ export type PendingReceiptPhoto = {
   dateStr: string;
   sourceName: string;
   category: string;
+  isProcessing: boolean;
 };
 
 const store = new Map<number, PendingReceiptPhoto>();

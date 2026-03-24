@@ -22,10 +22,13 @@ export const handleReceiptPhoto = async (
   const pending = pendingReceiptPhotoStore.get(ctx.user.id);
   if (!pending) return next();
 
+  // Silently ignore Telegram webhook retries while OCR is in progress
+  if (pending.isProcessing) return;
+
   const photo = ctx.message?.photo;
   if (!photo?.length) return next();
 
-  pendingReceiptPhotoStore.delete(ctx.user.id);
+  pendingReceiptPhotoStore.set(ctx.user.id, { ...pending, isProcessing: true });
 
   await ctx.reply("On process, please wait...");
 
@@ -33,6 +36,8 @@ export const handleReceiptPhoto = async (
     const fileId = photo.at(-1)!.file_id;
     const ocrText = await ocrReceiptFromFileId(fileId);
     const parsed = parseReceiptText(ocrText, pending.category);
+
+    pendingReceiptPhotoStore.delete(ctx.user.id);
 
     if (parsed.entries.length === 0) {
       return ctx.reply(
@@ -65,6 +70,7 @@ export const handleReceiptPhoto = async (
       reply_markup: RECEIPT_CONFIRM_KEYBOARD,
     });
   } catch (err) {
+    pendingReceiptPhotoStore.delete(ctx.user.id);
     return ctx.reply(
       err instanceof Error
         ? err.message
