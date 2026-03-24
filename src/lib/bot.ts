@@ -13,6 +13,8 @@ import {
 import { handleBalanceCommand } from "~/usecase/bot/handle-balance-command";
 import { handleHistoryCommand } from "~/usecase/bot/handle-history-command";
 import { handleFallbackMessage } from "~/usecase/bot/handle-fallback-message";
+import { handleReceiptConfirmation } from "~/usecase/bot/handle-receipt-confirmation";
+import { handleReceiptCommand } from "~/usecase/bot/handle-receipt-command";
 
 export const bot = new Bot<AppContext>(env.TELEGRAM_BOT_TOKEN);
 
@@ -34,4 +36,6 @@ bot.command("income", handleIncomeCommand);
 bot.command("expense", handleExpenseCommand);
 bot.command("balance", handleBalanceCommand);
 bot.command("history", handleHistoryCommand);
+bot.command("receipt", handleReceiptCommand);
+bot.on("message:text", handleReceiptConfirmation);
 bot.on("message", handleFallbackMessage);

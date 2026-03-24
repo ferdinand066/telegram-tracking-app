@@ -1,4 +1,3 @@
-import dayjs from "dayjs";
 import type { AppContext } from "~/lib/bot-context";
 import type {
   TransactionEntry,
@@ -8,11 +7,9 @@ import {
   addTransactionUseCase,
   TRANSACTION_TYPE,
 } from "~/usecase/add-transaction.usecase";
-import { formatAmount, parseAmount } from "~/utils/amount";
-import {
-  HUMAN_READABLE_DATE_FORMATS,
-  parseHumanReadableDate,
-} from "~/utils/date";
+import { parseAmount } from "~/utils/amount";
+import { parseHumanReadableDate } from "~/utils/date";
+import { formatTransactionReply } from "~/utils/format-transaction-reply";
 
 type ParsedCommand =
   | {
@@ -91,24 +88,6 @@ const parseTransactionCommand = (
   return { ok: true, dateStr, sourceName, entries };
 };
 
-const formatReply = (
-  dateStr: string,
-  sourceName: string,
-  entries: TransactionEntry[],
-): string => {
-  const parsedDate = dayjs(dateStr).format(
-    HUMAN_READABLE_DATE_FORMATS.DAY_MONTH_YEAR,
-  );
-  const category = entries[0]?.category ?? "other";
-
-  const lines = entries.map((e) =>
-    e.description
-      ? `${e.description} - ${formatAmount(e.amount)}`
-      : formatAmount(e.amount),
-  );
-  return [`${parsedDate} - ${category} - ${sourceName}`, ...lines].join("\n");
-};
-
 const handleTransactionCommand = async (
   ctx: AppContext,
   sign: TransactionType,
@@ -128,7 +107,9 @@ const handleTransactionCommand = async (
       telegramMessageId: ctx.message?.message_id ?? null,
     });
 
-    return ctx.reply(formatReply(parsed.dateStr, source.name, entries));
+    return ctx.reply(
+      formatTransactionReply(parsed.dateStr, source.name, entries),
+    );
   } catch (err) {
     return ctx.reply(
       err instanceof Error
