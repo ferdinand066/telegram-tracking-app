@@ -16,18 +16,21 @@ export type Database = {
     Tables: {
       fund_source_balances: {
         Row: {
-          balance: number;
           fund_source_id: string;
+          total_expense: number;
+          total_income: number;
           updated_at: string | null;
         };
         Insert: {
-          balance?: number;
           fund_source_id: string;
+          total_expense?: number;
+          total_income?: number;
           updated_at?: string | null;
         };
         Update: {
-          balance?: number;
           fund_source_id?: string;
+          total_expense?: number;
+          total_income?: number;
           updated_at?: string | null;
         };
         Relationships: [

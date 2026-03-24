@@ -47,7 +47,8 @@ CREATE TABLE transactions (
 
 CREATE TABLE fund_source_balances (
     fund_source_id UUID PRIMARY KEY,
-    balance NUMERIC NOT NULL DEFAULT 0,
+    total_income NUMERIC NOT NULL DEFAULT 0,
+    total_expense NUMERIC NOT NULL DEFAULT 0,
     updated_at TIMESTAMP DEFAULT NOW(),
 
     CONSTRAINT fk_balance_fund_source
@@ -77,11 +78,18 @@ ON transactions(transaction_date);
 CREATE OR REPLACE FUNCTION update_fund_balance()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO fund_source_balances (fund_source_id, balance)
-    VALUES (NEW.fund_source_id, NEW.amount)
+    INSERT INTO fund_source_balances (fund_source_id, total_income, total_expense)
+    VALUES (
+        NEW.fund_source_id,
+        CASE WHEN NEW.amount > 0 THEN NEW.amount ELSE 0 END,
+        CASE WHEN NEW.amount < 0 THEN ABS(NEW.amount) ELSE 0 END
+    )
     ON CONFLICT (fund_source_id)
     DO UPDATE SET
-        balance = fund_source_balances.balance + NEW.amount,
+        total_income = fund_source_balances.total_income
+            + CASE WHEN NEW.amount > 0 THEN NEW.amount ELSE 0 END,
+        total_expense = fund_source_balances.total_expense
+            + CASE WHEN NEW.amount < 0 THEN ABS(NEW.amount) ELSE 0 END,
         updated_at = NOW();
 
     RETURN NEW;
