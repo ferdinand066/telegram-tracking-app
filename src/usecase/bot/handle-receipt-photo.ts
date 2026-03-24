@@ -9,6 +9,26 @@ import { formatAmount } from "~/utils/amount";
 import dayjs from "dayjs";
 import { HUMAN_READABLE_DATE_FORMATS } from "~/utils/date";
 
+const IMAGE_DOCUMENT_NAME = /\.(jpe?g|png|gif|webp|bmp|heic|tiff?)$/i;
+
+function getReceiptImageFileId(message: AppContext["message"]): string | null {
+  if (!message) return null;
+
+  const photos = "photo" in message ? message.photo : undefined;
+  if (photos?.length) return photos.at(-1)!.file_id;
+
+  const doc = "document" in message ? message.document : undefined;
+  if (!doc) return null;
+
+  const mime = doc.mime_type ?? "";
+  if (mime.startsWith("image/")) return doc.file_id;
+
+  const name = doc.file_name ?? "";
+  if (IMAGE_DOCUMENT_NAME.test(name)) return doc.file_id;
+
+  return null;
+}
+
 const RECEIPT_CONFIRM_KEYBOARD = new InlineKeyboard()
   .text("Yes", "receipt:confirm")
   .text("No", "receipt:cancel");
@@ -25,15 +45,14 @@ export const handleReceiptPhoto = async (
   // Silently ignore Telegram webhook retries while OCR is in progress
   if (pending.isProcessing) return;
 
-  const photo = ctx.message?.photo;
-  if (!photo?.length) return next();
+  const fileId = getReceiptImageFileId(ctx.message);
+  if (!fileId) return next();
 
   pendingReceiptPhotoStore.set(ctx.user.id, { ...pending, isProcessing: true });
 
   await ctx.reply("On process, please wait...");
 
   try {
-    const fileId = photo.at(-1)!.file_id;
     const ocrText = await ocrReceiptFromFileId(fileId);
     const parsed = parseReceiptText(ocrText, pending.category);
 

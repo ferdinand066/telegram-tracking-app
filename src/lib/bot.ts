@@ -46,4 +46,5 @@ bot.callbackQuery("receipt:confirm", handleReceiptConfirmYes);
 bot.callbackQuery("receipt:cancel", handleReceiptConfirmNo);
 
 bot.on("message:photo", handleReceiptPhoto);
+bot.on("message:document", handleReceiptPhoto);
 bot.on("message", handleFallbackMessage);
