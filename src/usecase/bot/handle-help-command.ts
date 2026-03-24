@@ -16,7 +16,7 @@ export const handleHelpCommand = (ctx: AppContext) =>
       `*/source* <name> - <detail> — Create a fund source\n` +
       `*/balance* — Total income, expenses & net balance\n` +
       `*/history* — Last 10 transactions\n\n` +
-      `Amount must be a positive number (e.g. \`150.000\` or \`15k\`).` +
+      `Amount must be a positive number (e.g. \`150.000\` or \`15k\`).\n\n` +
       `*/receipt* — Add a receipt based on image\n` +
       `Format:\n` +
       `/receipt\n` +
