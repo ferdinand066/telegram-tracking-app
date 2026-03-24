@@ -1,6 +1,7 @@
 import type { FundSource } from "~/lib/supabase/model";
 import { fundSourceRepository } from "~/repository/fund-source.repository";
 import { transactionRepository } from "~/repository/transaction.repository";
+import { formatCategoryTitleCase } from "~/utils/category";
 
 export type TransactionEntry = {
   category: string;
@@ -44,8 +45,13 @@ export const addTransactionUseCase = async (
     );
   }
 
+  const entries = input.entries.map((e) => ({
+    ...e,
+    category: formatCategoryTitleCase(e.category),
+  }));
+
   await transactionRepository.bulkInsert(
-    input.entries.map((e) => ({
+    entries.map((e) => ({
       user_id: input.userId,
       fund_source_id: source.id,
       transaction_date: input.dateStr,
@@ -56,5 +62,5 @@ export const addTransactionUseCase = async (
     })),
   );
 
-  return { source, entries: input.entries };
+  return { source, entries };
 };

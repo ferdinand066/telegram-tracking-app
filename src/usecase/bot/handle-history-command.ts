@@ -2,6 +2,7 @@ import type { AppContext } from "~/lib/bot-context";
 import { getHistoryUseCase } from "~/usecase/get-history.usecase";
 import type { TransactionWithSource } from "~/repository/transaction.repository";
 import { formatAmount } from "~/utils/amount";
+import { formatCategoryTitleCase } from "~/utils/category";
 import { parseHumanReadableDate } from "~/utils/date";
 
 const USAGE_MESSAGE =
@@ -45,7 +46,7 @@ const formatTransactionLine = (
   t: TransactionWithSource,
   includeDate: boolean,
 ): string => {
-  const category = t.category ?? "uncategorized";
+  const category = formatCategoryTitleCase(t.category ?? "uncategorized");
   const descPart = t.description ? ` - ${t.description}` : "";
   const sign = t.amount >= 0 ? "+" : "";
   const amountStr = `${sign}${formatAmount(t.amount)}`;

@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import type { TransactionEntry } from "~/usecase/add-transaction.usecase";
 import { formatAmount } from "~/utils/amount";
+import { formatCategoryTitleCase } from "~/utils/category";
 import { HUMAN_READABLE_DATE_FORMATS } from "~/utils/date";
 
 export const formatTransactionReply = (
@@ -11,7 +12,7 @@ export const formatTransactionReply = (
   const parsedDate = dayjs(dateStr).format(
     HUMAN_READABLE_DATE_FORMATS.DAY_MONTH_YEAR,
   );
-  const category = entries[0]?.category ?? "other";
+  const category = formatCategoryTitleCase(entries[0]?.category ?? "other");
 
   const lines = entries.map((e) =>
     e.description

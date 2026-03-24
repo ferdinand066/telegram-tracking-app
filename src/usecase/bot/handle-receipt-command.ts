@@ -1,6 +1,7 @@
 import type { AppContext } from "~/lib/bot-context";
-import { parseHumanReadableDate } from "~/utils/date";
 import { pendingReceiptPhotoStore } from "~/store/pending-receipt-photo.store";
+import { formatCategoryTitleCase } from "~/utils/category";
+import { parseHumanReadableDate } from "~/utils/date";
 
 const USAGE_MESSAGE = [
   "Send receipt details in the format:",
@@ -28,7 +29,7 @@ export const handleReceiptCommand = async (ctx: AppContext) => {
   }
 
   const rawDate = parts[0]!;
-  const category = parts[1]!;
+  const category = formatCategoryTitleCase(parts[1]!);
   const sourceName = parts.slice(2).join(" - ");
 
   const dateStr = parseHumanReadableDate(rawDate);

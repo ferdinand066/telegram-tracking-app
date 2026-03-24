@@ -1,5 +1,6 @@
 import type { TransactionEntry } from "~/usecase/add-transaction.usecase";
 import { formatAmount } from "~/utils/amount";
+import { formatCategoryTitleCase } from "~/utils/category";
 import dayjs from "dayjs";
 import { HUMAN_READABLE_DATE_FORMATS } from "~/utils/date";
 
@@ -283,6 +284,8 @@ export const parseReceiptText = (
   text: string,
   category: string,
 ): ParsedReceipt => {
+  const categoryForEntries = formatCategoryTitleCase(category);
+
   const lines = text
     .split("\n")
     .map((l) => normalizeOcrReceiptLine(l.trim()))
@@ -354,7 +357,7 @@ export const parseReceiptText = (
     const multi = tryParseMultiColumnItemLine(line);
     if (multi) {
       items.push({
-        category,
+        category: categoryForEntries,
         description: multi.description,
         amount: multi.amount,
       });
@@ -373,7 +376,7 @@ export const parseReceiptText = (
     const description = stripLeadingQty(descMatch[1]!.trim());
     if (!hasLetters(description)) continue;
 
-    items.push({ category, description, amount });
+    items.push({ category: categoryForEntries, description, amount });
   }
 
   if (items.length > 0) {
@@ -391,7 +394,13 @@ export const parseReceiptText = (
 
   // Fallback: single entry for the total amount
   const entries: TransactionEntry[] = total
-    ? [{ category, description: merchantName, amount: total }]
+    ? [
+        {
+          category: categoryForEntries,
+          description: merchantName,
+          amount: total,
+        },
+      ]
     : [];
 
   return { merchantName, entries, total };
@@ -414,7 +423,7 @@ export const formatReceiptConfirmation = (
     "Receipt Parsed:",
     `Date: ${date}`,
     `Source: ${sourceName}`,
-    `Category: ${category}`,
+    `Category: ${formatCategoryTitleCase(category)}`,
   ];
 
   if (parsed.merchantName) {
