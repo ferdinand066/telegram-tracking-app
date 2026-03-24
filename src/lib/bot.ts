@@ -38,13 +38,13 @@ bot.command("balance", handleBalanceCommand);
 bot.command("history", handleHistoryCommand);
 
 bot.command("receipt", handleReceiptCommand);
-bot.on("message:photo", async (ctx, next) => {
-  const caption = ctx.message.caption ?? "";
-  if (/^\/receipt(?:@\w+)?(\s|$)/i.test(caption)) {
-    return handleReceiptCommand(ctx);
-  }
-  return next();
-});
+// bot.on("message:photo", async (ctx, next) => {
+//   const caption = ctx.message.caption ?? "";
+//   if (/^\/receipt(?:@\w+)?(\s|$)/i.test(caption)) {
+//     return handleReceiptCommand(ctx);
+//   }
+//   return next();
+// });
 bot.on("message:text", handleReceiptConfirmation);
 
 bot.on("message", handleFallbackMessage);
