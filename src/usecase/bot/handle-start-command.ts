@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import type { AppContext } from "~/lib/bot-context";
 import { HUMAN_READABLE_DATE_FORMATS } from "~/utils/date";
 
-export function handleStartCommand(ctx: AppContext) {
+export const handleStartCommand = (ctx: AppContext) => {
   const today = dayjs().format(HUMAN_READABLE_DATE_FORMATS.DAY_MONTH_YEAR);
 
   return ctx.reply(
@@ -35,4 +35,4 @@ export function handleStartCommand(ctx: AppContext) {
       `/help`,
     { parse_mode: "Markdown" },
   );
-}
+};

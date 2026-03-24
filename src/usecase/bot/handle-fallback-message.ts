@@ -1,5 +1,4 @@
 import type { AppContext } from "~/lib/bot-context";
 
-export function handleFallbackMessage(ctx: AppContext) {
-  return ctx.reply("I didn't understand that. Type /help to see available commands.");
-}
+export const handleFallbackMessage = (ctx: AppContext) =>
+  ctx.reply("I didn't understand that. Type /help to see available commands.");

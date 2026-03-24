@@ -1,7 +1,7 @@
 import type { AppContext } from "~/lib/bot-context";
 
-export function handleHelpCommand(ctx: AppContext) {
-  return ctx.reply(
+export const handleHelpCommand = (ctx: AppContext) =>
+  ctx.reply(
     `*Available Commands*\n\n` +
       `*/income* — Add income transactions\n` +
       `Format:\n` +
@@ -19,4 +19,3 @@ export function handleHelpCommand(ctx: AppContext) {
       `Amount must be a positive number (e.g. \`150.000\` or \`15k\`).`,
     { parse_mode: "Markdown" },
   );
-}

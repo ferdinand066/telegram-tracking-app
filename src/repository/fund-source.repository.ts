@@ -7,10 +7,7 @@ type CreateFundSourcePayload =
   Database["public"]["Tables"]["fund_sources"]["Insert"];
 
 export const fundSourceRepository = {
-  async getActiveByName(
-    userId: number,
-    name: string,
-  ) {
+  async getActiveByName(userId: number, name: string) {
     const { data, error } = await supabaseServer
       .from("fund_sources")
       .select()
@@ -33,9 +30,7 @@ export const fundSourceRepository = {
   },
 
   async create(payload: CreateFundSourcePayload) {
-    const { error } = await supabaseServer
-      .from("fund_sources")
-      .insert(payload);
+    const { error } = await supabaseServer.from("fund_sources").insert(payload);
     if (error) throw error;
   },
 };

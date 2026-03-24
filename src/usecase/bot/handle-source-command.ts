@@ -1,7 +1,7 @@
 import type { AppContext } from "~/lib/bot-context";
 import { createFundSourceUseCase } from "~/usecase/create-fund-source.usecase";
 
-export async function handleSourceCommand(ctx: AppContext) {
+export const handleSourceCommand = async (ctx: AppContext) => {
   const argText = (ctx.message?.text ?? "").replace(/^\/source\s*/i, "").trim();
   const match = /^(.*?)\s*-\s*(.*)$/i.exec(argText);
 
@@ -29,4 +29,4 @@ export async function handleSourceCommand(ctx: AppContext) {
     `✅ Fund source created!\n\n📌 *${name}*${detail ? `\n📝 ${detail}` : ""}`,
     { parse_mode: "Markdown" },
   );
-}
+};

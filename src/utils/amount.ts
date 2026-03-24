@@ -8,26 +8,24 @@ const ptBrAmountFormatter = new Intl.NumberFormat("pt-BR", {
   maximumFractionDigits: 2,
 });
 
-export function formatAmount(amount: number): string {
-  return ptBrAmountFormatter.format(amount);
-}
+export const formatAmount = (amount: number): string =>
+  ptBrAmountFormatter.format(amount);
 
-function normalizeNumericString(s: string): string {
-  // A dot followed by exactly 3 digits (not preceded by more digits) = thousands separator → strip it
-  // Any other dot = decimal point → keep as-is
-  // Also accept comma as decimal separator
+const normalizeNumericString = (s: string): string => {
   return s.replace(/\.(\d{3})(?!\d)/g, "$1").replace(",", ".");
-}
+};
 
-export function parseAmount(raw: string): number {
+export const parseAmount = (raw: string): number => {
   const normalized = raw.trim().toLowerCase();
 
   for (const [suffix, multiplier] of Object.entries(SUFFIX_MULTIPLIERS)) {
     if (normalized.endsWith(suffix)) {
-      const numeric = normalizeNumericString(normalized.slice(0, -suffix.length));
+      const numeric = normalizeNumericString(
+        normalized.slice(0, -suffix.length),
+      );
       return parseFloat(numeric) * multiplier;
     }
   }
 
   return parseFloat(normalizeNumericString(normalized));
-}
+};

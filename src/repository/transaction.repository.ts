@@ -11,28 +11,23 @@ export const transactionRepository = {
     if (error) throw error;
   },
 
-  async findAmountsByUserId(
-    userId: number,
-  ) {
+  async findAmountsByUserId(userId: number) {
     const { data, error } = await supabaseServer
       .from("transactions")
       .select("amount")
-      .eq("user_id", userId)
+      .eq("user_id", userId);
 
     if (error) throw error;
     return data ?? [];
   },
 
-  async findRecentByUserId(
-    userId: number,
-    limit = 10,
-  ) {
+  async findRecentByUserId(userId: number, limit = 10) {
     const { data, error } = await supabaseServer
       .from("transactions")
       .select()
       .eq("user_id", userId)
       .order("transaction_date", { ascending: false })
-      .limit(limit)
+      .limit(limit);
 
     if (error) throw error;
     return data ?? [];

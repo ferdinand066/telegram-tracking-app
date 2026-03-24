@@ -1,0 +1,36 @@
+---
+description: Prefer const arrow functions over function declarations in TypeScript
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Function style
+
+Define functions as `const` bound to arrow functions, not `function` declarations.
+
+- Use `export const foo = () => { ... }` instead of `export function foo() { ... }`.
+- Use `export const foo = async () => { ... }` instead of `export async function foo() { ... }`.
+- For default exports, name the const then export: `const Home = async () => { ... }; export default Home;` instead of `export default async function Home() { ... }`.
+- **Exception**: Do not change `function` used inside other expressions (e.g. `array.map(function () {})` or object methods) unless refactoring to arrows is already in scope.
+
+```typescript
+// ❌ BAD
+export function parseAmount(raw: string): number {
+  return 0;
+}
+
+export async function loadData() {
+  return [];
+}
+
+// ✅ GOOD
+export const parseAmount = (raw: string): number => {
+  return 0;
+};
+
+export const loadData = async () => {
+  return [];
+};
+```
+
+Remember: `const` is not hoisted — define helpers above the functions that use them.

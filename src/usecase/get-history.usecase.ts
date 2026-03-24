@@ -1,8 +1,4 @@
 import { transactionRepository } from "~/repository/transaction.repository";
 
-export async function getHistoryUseCase(
-  userId: number,
-  limit = 10,
-) {
-  return transactionRepository.findRecentByUserId(userId, limit);
-}
+export const getHistoryUseCase = async (userId: number, limit = 10) =>
+  transactionRepository.findRecentByUserId(userId, limit);

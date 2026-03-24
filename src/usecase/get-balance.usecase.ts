@@ -6,7 +6,9 @@ type BalanceResult = {
   net: number;
 };
 
-export async function getBalanceUseCase(userId: number): Promise<BalanceResult> {
+export const getBalanceUseCase = async (
+  userId: number,
+): Promise<BalanceResult> => {
   const amounts = await transactionRepository.findAmountsByUserId(userId);
 
   const totalIncome = amounts
@@ -18,4 +20,4 @@ export async function getBalanceUseCase(userId: number): Promise<BalanceResult> 
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
   return { totalIncome, totalExpense, net: totalIncome - totalExpense };
-}
+};

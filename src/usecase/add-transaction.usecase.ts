@@ -13,7 +13,8 @@ export const TRANSACTION_TYPE = {
   EXPENSE: -1,
 } as const;
 
-export type TransactionType = (typeof TRANSACTION_TYPE)[keyof typeof TRANSACTION_TYPE];
+export type TransactionType =
+  (typeof TRANSACTION_TYPE)[keyof typeof TRANSACTION_TYPE];
 
 type AddTransactionInput = {
   userId: number;
@@ -29,9 +30,9 @@ type AddTransactionResult = {
   entries: TransactionEntry[];
 };
 
-export async function addTransactionUseCase(
+export const addTransactionUseCase = async (
   input: AddTransactionInput,
-): Promise<AddTransactionResult> {
+): Promise<AddTransactionResult> => {
   const source = await fundSourceRepository.getActiveByName(
     input.userId,
     input.fundSourceName,
@@ -56,4 +57,4 @@ export async function addTransactionUseCase(
   );
 
   return { source, entries: input.entries };
-}
+};

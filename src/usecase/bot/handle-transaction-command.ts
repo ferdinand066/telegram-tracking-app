@@ -1,17 +1,32 @@
 import dayjs from "dayjs";
 import type { AppContext } from "~/lib/bot-context";
-import type { TransactionEntry, TransactionType } from "~/usecase/add-transaction.usecase";
-import { addTransactionUseCase, TRANSACTION_TYPE } from "~/usecase/add-transaction.usecase";
+import type {
+  TransactionEntry,
+  TransactionType,
+} from "~/usecase/add-transaction.usecase";
+import {
+  addTransactionUseCase,
+  TRANSACTION_TYPE,
+} from "~/usecase/add-transaction.usecase";
 import { formatAmount, parseAmount } from "~/utils/amount";
-import { HUMAN_READABLE_DATE_FORMATS, parseHumanReadableDate } from "~/utils/date";
-
-// ─── Parsers ──────────────────────────────────────────────────────────────────
+import {
+  HUMAN_READABLE_DATE_FORMATS,
+  parseHumanReadableDate,
+} from "~/utils/date";
 
 type ParsedCommand =
-  | { ok: true; dateStr: string; sourceName: string; entries: TransactionEntry[] }
+  | {
+      ok: true;
+      dateStr: string;
+      sourceName: string;
+      entries: TransactionEntry[];
+    }
   | { ok: false; errorMessage: string };
 
-function parseTransactionCommand(text: string, sign: TransactionType): ParsedCommand {
+const parseTransactionCommand = (
+  text: string,
+  sign: TransactionType,
+): ParsedCommand => {
   const lines = text
     .split("\n")
     .map((l) => l.trim())
@@ -23,8 +38,7 @@ function parseTransactionCommand(text: string, sign: TransactionType): ParsedCom
   if (lines.length < 2) {
     return {
       ok: false,
-      errorMessage:
-        `Usage:\n/${command}\n<date> - <category> - <source>\n<description> - <amount>\n\n<amount> formats:\n- 5000 (plain number)\n- 2k / 2K (k = 1,000)\n- 3jt / 3JT (jt = 1,000,000)\n- 15.2k = 15,200 | 17.5jt = 17,500,000\n\nExample:\n/${command}\nToday - salary - BCA\nMonthly pay - 5000`,
+      errorMessage: `Usage:\n/${command}\n<date> - <category> - <source>\n<description> - <amount>\n\n<amount> formats:\n- 5000 (plain number)\n- 2k / 2K (k = 1,000)\n- 3jt / 3JT (jt = 1,000,000)\n- 15.2k = 15,200 | 17.5jt = 17,500,000\n\nExample:\n/${command}\nToday - salary - BCA\nMonthly pay - 5000`,
     };
   }
 
@@ -64,8 +78,7 @@ function parseTransactionCommand(text: string, sign: TransactionType): ParsedCom
     if (isNaN(amount) || amount <= 0) {
       return {
         ok: false,
-        errorMessage:
-          `Invalid amount in line: "${line}"\nAmount must be a positive number.\nSupported: 5000, 5.000, 2k/2K, 3jt/3JT`,
+        errorMessage: `Invalid amount in line: "${line}"\nAmount must be a positive number.\nSupported: 5000, 5.000, 2k/2K, 3jt/3JT`,
       };
     }
 
@@ -76,14 +89,16 @@ function parseTransactionCommand(text: string, sign: TransactionType): ParsedCom
   }
 
   return { ok: true, dateStr, sourceName, entries };
-}
+};
 
-function formatReply(
+const formatReply = (
   dateStr: string,
   sourceName: string,
   entries: TransactionEntry[],
-): string {
-  const parsedDate = dayjs(dateStr).format(HUMAN_READABLE_DATE_FORMATS.DAY_MONTH_YEAR);
+): string => {
+  const parsedDate = dayjs(dateStr).format(
+    HUMAN_READABLE_DATE_FORMATS.DAY_MONTH_YEAR,
+  );
   const category = entries[0]?.category ?? "other";
 
   const lines = entries.map((e) =>
@@ -92,11 +107,12 @@ function formatReply(
       : formatAmount(e.amount),
   );
   return [`${parsedDate} - ${category} - ${sourceName}`, ...lines].join("\n");
-}
+};
 
-// ─── Handler ──────────────────────────────────────────────────────────────────
-
-async function handleTransactionCommand(ctx: AppContext, sign: TransactionType) {
+const handleTransactionCommand = async (
+  ctx: AppContext,
+  sign: TransactionType,
+) => {
   const parsed = parseTransactionCommand(ctx.message?.text ?? "", sign);
   if (!parsed.ok) return ctx.reply(parsed.errorMessage);
 
@@ -115,10 +131,12 @@ async function handleTransactionCommand(ctx: AppContext, sign: TransactionType) 
     return ctx.reply(formatReply(parsed.dateStr, source.name, entries));
   } catch (err) {
     return ctx.reply(
-      err instanceof Error ? err.message : "Failed to save transactions. Please try again.",
+      err instanceof Error
+        ? err.message
+        : "Failed to save transactions. Please try again.",
     );
   }
-}
+};
 
 export const handleIncomeCommand = (ctx: AppContext) =>
   handleTransactionCommand(ctx, TRANSACTION_TYPE.INCOME);

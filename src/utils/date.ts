@@ -24,23 +24,38 @@ const READABLE_DATE_CONSTANT = {
  *
  * Returns null if the input cannot be parsed or is not a valid calendar date.
  */
-export function parseHumanReadableDate(input: string): string | null {
+export const parseHumanReadableDate = (input: string): string | null => {
   const normalized = input.trim().toLowerCase();
 
-  if (normalized === READABLE_DATE_CONSTANT.TODAY) return dayjs().format(HUMAN_READABLE_DATE_FORMATS.STANDARD);
+  if (normalized === READABLE_DATE_CONSTANT.TODAY)
+    return dayjs().format(HUMAN_READABLE_DATE_FORMATS.STANDARD);
 
-  if (normalized === READABLE_DATE_CONSTANT.YESTERDAY) return dayjs().subtract(1, "day").format(HUMAN_READABLE_DATE_FORMATS.STANDARD);
+  if (normalized === READABLE_DATE_CONSTANT.YESTERDAY)
+    return dayjs()
+      .subtract(1, "day")
+      .format(HUMAN_READABLE_DATE_FORMATS.STANDARD);
 
-  const dayMonthOnly = dayjs(input, HUMAN_READABLE_DATE_FORMATS.DAY_MONTH, true);
+  const dayMonthOnly = dayjs(
+    input,
+    HUMAN_READABLE_DATE_FORMATS.DAY_MONTH,
+    true,
+  );
   if (dayMonthOnly.isValid()) {
-    return dayMonthOnly.year(dayjs().year()).format(HUMAN_READABLE_DATE_FORMATS.STANDARD);
+    return dayMonthOnly
+      .year(dayjs().year())
+      .format(HUMAN_READABLE_DATE_FORMATS.STANDARD);
   }
 
-  const dayMonthYear = dayjs(input, HUMAN_READABLE_DATE_FORMATS.DAY_MONTH_YEAR, true);
-  if (dayMonthYear.isValid()) return dayMonthYear.format(HUMAN_READABLE_DATE_FORMATS.STANDARD);
+  const dayMonthYear = dayjs(
+    input,
+    HUMAN_READABLE_DATE_FORMATS.DAY_MONTH_YEAR,
+    true,
+  );
+  if (dayMonthYear.isValid())
+    return dayMonthYear.format(HUMAN_READABLE_DATE_FORMATS.STANDARD);
 
   const iso = dayjs(input, HUMAN_READABLE_DATE_FORMATS.STANDARD, true);
   if (iso.isValid()) return iso.format(HUMAN_READABLE_DATE_FORMATS.STANDARD);
 
   return null;
-}
+};

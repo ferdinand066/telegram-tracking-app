@@ -2,11 +2,13 @@ import type { AppContext } from "~/lib/bot-context";
 import { getBalanceUseCase } from "~/usecase/get-balance.usecase";
 import { formatAmount } from "~/utils/amount";
 
-export async function handleBalanceCommand(ctx: AppContext) {
+export const handleBalanceCommand = async (ctx: AppContext) => {
   if (!ctx.user) return ctx.reply("Failed to identify user. Please try again.");
 
   try {
-    const { totalIncome, totalExpense, net } = await getBalanceUseCase(ctx.user.id);
+    const { totalIncome, totalExpense, net } = await getBalanceUseCase(
+      ctx.user.id,
+    );
     const netSign = net >= 0 ? "+" : "";
 
     const incomeStr = formatAmount(totalIncome);
@@ -19,7 +21,6 @@ export async function handleBalanceCommand(ctx: AppContext) {
       { label: "📈 Net Balance:", value: netStr },
     ] as const;
 
-    // Use inline code per row (not a ``` code block) so Telegram doesn't show the code badge.
     const leftWidth = Math.max(...labelRows.map((row) => row.label.length));
     const rightWidth = Math.max(...labelRows.map((row) => row.value.length));
     const formatRow = (label: string, value: string) =>
@@ -30,10 +31,7 @@ export async function handleBalanceCommand(ctx: AppContext) {
     const line3 = formatRow(labelRows[2].label, labelRows[2].value);
 
     const alignedText =
-      `\`${line1}\`\n` +
-      `\`${line2}\`\n` +
-      `━━━━━━━━━━━━━━\n` +
-      `\`${line3}\``;
+      `\`${line1}\`\n` + `\`${line2}\`\n` + `━━━━━━━━━━━━━━\n` + `\`${line3}\``;
 
     return ctx.reply(
       `📊 *Your Balance* (${ctx.user.currency})\n\n${alignedText}`,
@@ -42,4 +40,4 @@ export async function handleBalanceCommand(ctx: AppContext) {
   } catch {
     return ctx.reply("Failed to fetch balance. Please try again.");
   }
-}
+};

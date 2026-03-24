@@ -6,12 +6,12 @@ type CreateFundSourceInput = {
   detail: string | null;
 };
 
-export async function createFundSourceUseCase(
+export const createFundSourceUseCase = async (
   input: CreateFundSourceInput,
-): Promise<void> {
+): Promise<void> => {
   await fundSourceRepository.create({
     user_id: input.userId,
     name: input.name,
     detail: input.detail,
   });
-}
+};

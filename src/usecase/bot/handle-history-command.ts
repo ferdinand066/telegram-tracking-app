@@ -3,7 +3,7 @@ import { getHistoryUseCase } from "~/usecase/get-history.usecase";
 import type { Transaction } from "~/lib/supabase/model";
 import { formatAmount } from "~/utils/amount";
 
-function formatTransactionLine(t: Transaction): string {
+const formatTransactionLine = (t: Transaction): string => {
   const isIncome = t.amount >= 0;
   const sign = isIncome ? "+" : "";
   const emoji = isIncome ? "💰" : "💸";
@@ -14,9 +14,9 @@ function formatTransactionLine(t: Transaction): string {
   const desc = t.description ? ` — ${t.description}` : "";
   const cat = t.category ?? "uncategorized";
   return `${emoji} \`${sign}${formatAmount(Number(t.amount))}\` *${cat}*${desc} _(${date})_`;
-}
+};
 
-export async function handleHistoryCommand(ctx: AppContext) {
+export const handleHistoryCommand = async (ctx: AppContext) => {
   if (!ctx.user) return ctx.reply("Failed to identify user. Please try again.");
 
   try {
@@ -37,4 +37,4 @@ export async function handleHistoryCommand(ctx: AppContext) {
   } catch {
     return ctx.reply("Failed to fetch history. Please try again.");
   }
-}
+};
