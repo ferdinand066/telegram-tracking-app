@@ -16,6 +16,25 @@ const preprocessImage = async (buffer: Buffer): Promise<Buffer> => {
     .toBuffer();
 };
 
+export const ocrFromBuffer = async (rawBuffer: Buffer): Promise<string> => {
+  const processedBuffer = await preprocessImage(rawBuffer);
+  const worker = await createWorker("eng", 1);
+
+  try {
+    await worker.setParameters({
+      tessedit_char_whitelist: RECEIPT_CHAR_WHITELIST,
+    });
+
+    const {
+      data: { text },
+    } = await worker.recognize(processedBuffer);
+
+    return text;
+  } finally {
+    await worker.terminate();
+  }
+};
+
 export const ocrReceiptFromFileId = async (fileId: string): Promise<string> => {
   const fileInfoRes = await fetch(
     `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getFile?file_id=${fileId}`,
@@ -37,21 +56,5 @@ export const ocrReceiptFromFileId = async (fileId: string): Promise<string> => {
   if (!imageRes.ok) throw new Error("Failed to download image from Telegram");
 
   const rawBuffer = Buffer.from(await imageRes.arrayBuffer());
-  const processedBuffer = await preprocessImage(rawBuffer);
-
-  const worker = await createWorker("eng", 1);
-
-  try {
-    await worker.setParameters({
-      tessedit_char_whitelist: RECEIPT_CHAR_WHITELIST,
-    });
-
-    const {
-      data: { text },
-    } = await worker.recognize(processedBuffer);
-
-    return text;
-  } finally {
-    await worker.terminate();
-  }
+  return ocrFromBuffer(rawBuffer);
 };
