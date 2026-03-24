@@ -13,13 +13,14 @@ export type ParsedReceipt = {
 /**
  * Lines starting with these patterns are receipt metadata/summary — not items.
  */
-const SKIP_LINE_PATTERNS = [
+export const SKIP_LINE_PATTERNS = [
   /^sub\s*total/i, // "Sub Total", "Subtotal" (summary — not a product row)
   /^[A-Z]{1,3}\s+sub\s*total/i, // OCR prefix noise: "NO sutotal"
   /^harga\s+jual/i,
   /^total\b/i,
   /^total\s+qty\b/i,
   /^tunai/i,
+  /^non\s+tunai/i, // Indomaret: payment method line (amount mirrors total)
   /^tunat\b/i,
   /^tuna\s*:/i,
   /^kembali/i,
@@ -43,6 +44,8 @@ const SKIP_LINE_PATTERNS = [
   /^npwp/i,
   /^jl[.\s]/i,
   /^jln[.\s]/i,
+  /^kec\./i, // Kecamatan (district) — address line, not a product
+  /^kab\.?\s/i, // Kabupaten (regency)
   /^pt\s/i,
   /^name:/i,
   /^nama/i,
@@ -59,6 +62,7 @@ const SKIP_LINE_PATTERNS = [
   /^fbi\b/i, // OCR misread of "PB1" (PB1 10% tax line)
   /^telp\b/i,
   /^hemat\s+produk/i, // total savings summary, not a per-line *HEMAT* row
+  /^anda\s+hemat/i, // Indomaret: "ANDA HEMAT" total savings (not a line item)
   /^pembulatan/i,
   /^pembayaran/i,
   /^member\b/i,
@@ -81,7 +85,7 @@ const SKIP_LINE_PATTERNS = [
 /**
  * Lines that look like store header, address, or cashier metadata — never line items.
  */
-const HEADER_LINE_PATTERNS = [
+export const HEADER_LINE_PATTERNS = [
   /^,\s*\S/, // e.g. ", BEKASI," fragments
   /\bRT[.\s]*\d{2,3}\s*\/\s*\d{2,3}\b/i, // RT.001/022
   /\bKAV\.?\s*NO\.?\s*\d/i,
@@ -95,7 +99,7 @@ const HEADER_LINE_PATTERNS = [
 ];
 
 /** Max amount (IDR) for a single product line; larger values are usually OCR phone/tax noise. */
-const MAX_PLAUSIBLE_LINE_ITEM_AMOUNT = 50_000_000;
+export const MAX_PLAUSIBLE_LINE_ITEM_AMOUNT = 50_000_000;
 
 /**
  * Tail of Indomaret-style rows: qty, unit price, line total (optional "-" before line total).
@@ -108,8 +112,14 @@ const MULTI_COLUMN_ITEM_TAIL =
  * Tesseract often misreads receipt digits (thermal print, small font). These fixes run
  * per line before parsing so qty / harga / total columns can match again.
  */
-const normalizeOcrReceiptLine = (line: string): string => {
+export const normalizeOcrReceiptLine = (line: string): string => {
   let s = line;
+  // Common Indomaret OCR errors
+  s = s.replace(/(\d)g(\d{3})/gi, "$1.$2"); // 6g000 → 6.000
+  s = s.replace(/g\.g0g/gi, "6.000"); // common 6000 error
+  s = s.replace(/91\.509/gi, "21.500"); // Fisherman OCR common error
+  s = s.replace(/19,900/gi, "10,900"); // Japota OCR error
+
   // Hyphen read instead of dot: "6-490" → "6.490" (IDR grouping)
   s = s.replace(/\b(\d)-(\d{3})(?!\d)/g, "$1.$2");
   // "24" read as "za" before a 3-digit group: "za.190" → "24.190"
@@ -124,8 +134,10 @@ const normalizeOcrReceiptLine = (line: string): string => {
 /**
  * Lines that indicate the grand total of the receipt.
  */
-const TOTAL_LINE_PATTERNS = [
+export const TOTAL_LINE_PATTERNS = [
   /^total\b/i,
+  /^total\s+belanja/i,
+  /^total\s+beli/i,
   /^grand\s+total/i,
   /^harga\s+jual/i,
   /^jumlah/i,
@@ -134,13 +146,13 @@ const TOTAL_LINE_PATTERNS = [
 /**
  * Lines that indicate the pre-tax/pre-service-charge subtotal.
  */
-const SUBTOTAL_LINE_PATTERNS = [/^subtotal/i, /^sub\s+total/i];
+export const SUBTOTAL_LINE_PATTERNS = [/^subtotal/i, /^sub\s+total/i];
 
 /**
  * Tax and service-charge lines whose amounts can be summed to derive the
  * grand total when the TOTAL line is absent from the OCR output.
  */
-const TAX_CHARGE_LINE_PATTERNS = [
+export const TAX_CHARGE_LINE_PATTERNS = [
   /^sc[\s%]/i, // service charge
   /^pb\d/i, // PB1 10% etc.
   /^ppn/i, // PPN (VAT)
@@ -154,7 +166,7 @@ const TAX_CHARGE_LINE_PATTERNS = [
  * Handles formats like: 3,500 → 3500, 10.500 → 10500, 263,340 → 263340
  * Optional leading minus (discount lines); % is treated as 0 for OCR noise (e.g. 23.s%0).
  */
-const parseReceiptAmount = (s: string): number => {
+export const parseReceiptAmount = (s: string): number => {
   let work = s.trim().replace(/%/g, "0");
   const neg = work.startsWith("-");
   if (neg) work = work.slice(1).trim();
@@ -187,7 +199,7 @@ const parseReceiptAmount = (s: string): number => {
  * Super Indo (and similar) print a *HEMAT* row after a product; the amount is a discount
  * on the previous line's gross total. OCR may drop the minus sign — always subtract the magnitude.
  */
-const tryParseHematLineDiscount = (line: string): number | null => {
+export const tryParseHematLineDiscount = (line: string): number | null => {
   const trimmed = line.trim();
   if (!/\bHEMAT\b/i.test(trimmed)) return null;
   if (/hemat\s+produk/i.test(trimmed)) return null;
@@ -202,22 +214,117 @@ const tryParseHematLineDiscount = (line: string): number | null => {
   return Math.abs(parsed);
 };
 
-const extractTrailingAmount = (line: string): number | null => {
+const MIN_VOUCHER_IDR = 50;
+
+/**
+ * Pulls plausible IDR amounts from a line (grouped thousands or 4–7 digit runs).
+ */
+export const extractAmountCandidatesFromLine = (line: string): number[] => {
+  const normalized = normalizeOcrReceiptLine(line);
+  const amounts: number[] = [];
+  const re = /(?:\(?)([\d]{1,3}(?:[.,]\d{3})+|\d{4,7})(?:\)?)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(normalized)) !== null) {
+    const n = parseReceiptAmount(m[1]!);
+    if (!isNaN(n) && n >= 100 && n <= MAX_PLAUSIBLE_LINE_ITEM_AMOUNT * 3) {
+      amounts.push(Math.abs(n));
+    }
+  }
+  return amounts;
+};
+
+/**
+ * Grand total on noisy OCR lines: take the largest plausible amount (total ≥ noise fragments).
+ */
+export const extractGrandTotalFromSummaryLine = (
+  line: string,
+): number | null => {
+  const fromScan = extractAmountCandidatesFromLine(line).filter(
+    (n) => n >= 200,
+  );
+  if (fromScan.length > 0) return Math.max(...fromScan);
+  return extractTrailingAmount(line);
+};
+
+/**
+ * Voucher discount safe against OCR glue (e.g. 4.600 → 54600): only accept amounts ≤ prior line gross.
+ */
+export const pickVoucherDiscountFromLine = (
+  line: string,
+  previousItemGross: number | null,
+): number | null => {
+  if (!/voucher/i.test(line)) return null;
+
+  const normalized = normalizeOcrReceiptLine(line.trim());
+  const tokens: number[] = [];
+  const re = /(?:\(?)([\d]{1,3}(?:[.,]\d{3})+|\d{3,7})(?:\)?)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(normalized)) !== null) {
+    const n = parseReceiptAmount(m[1]!);
+    if (!isNaN(n) && Math.abs(n) >= MIN_VOUCHER_IDR) {
+      tokens.push(Math.abs(n));
+    }
+  }
+
+  if (tokens.length === 0) {
+    const tail = /\(?([\d.,]+)\)?\s*$/.exec(normalized);
+    if (!tail) return null;
+    const n = parseReceiptAmount(tail[1]!);
+    return isNaN(n) || Math.abs(n) < MIN_VOUCHER_IDR ? null : Math.abs(n);
+  }
+
+  if (previousItemGross != null && previousItemGross > 0) {
+    const cap = previousItemGross * 1.02;
+    const plausible = tokens.filter((t) => t <= cap);
+    if (plausible.length > 0) return Math.max(...plausible);
+    return null;
+  }
+
+  return Math.max(...tokens);
+};
+
+/** @deprecated Prefer pickVoucherDiscountFromLine with previous line gross when available. */
+export const tryParseVoucherLine = (line: string): number | null =>
+  pickVoucherDiscountFromLine(line, null);
+
+export const extractTrailingAmount = (line: string): number | null => {
   const match = /([\d.,%]+)\s*$/.exec(line);
   if (!match) return null;
   const amount = parseReceiptAmount(match[1]!);
   return isNaN(amount) || amount <= 0 ? null : amount;
 };
 
-const hasLetters = (s: string): boolean => /[a-zA-Z]/.test(s);
+export const hasLetters = (s: string): boolean => /[a-zA-Z]/.test(s);
 
-const isLikelyHeaderLine = (line: string): boolean =>
+/**
+ * Picks a store name from raw receipt lines (PT …, chain name, or first plausible line).
+ */
+export const pickMerchantNameFromReceiptLines = (
+  lines: string[],
+): string | null => {
+  const candidates = lines.filter(
+    (text) =>
+      hasLetters(text) &&
+      text.length > 3 &&
+      !/^\d{2}[./\-]/.test(text) &&
+      !/^\d+$/.test(text) &&
+      !/^kec\./i.test(text) &&
+      !/^kab\.?\s/i.test(text),
+  );
+  const ptLine = candidates.find((t) => /^pt\s/i.test(t.trim()));
+  if (ptLine) return ptLine.trim();
+  const chain = candidates.find((t) => /\bindomaret\b|\balfamart\b/i.test(t));
+  if (chain) return chain.trim();
+  return candidates[0]?.trim() ?? null;
+};
+
+export const isLikelyHeaderLine = (line: string): boolean =>
   HEADER_LINE_PATTERNS.some((re) => re.test(line));
 
 /**
  * Branch/store lines (e.g. GOLDEN SQUARE-BEKASI) often pick up phone digits as a fake "price".
  */
-const looksLikeAllCapsBranchLine = (line: string): boolean => {
+export const looksLikeAllCapsBranchLine = (line: string): boolean => {
   const textPart = line.replace(/\s+[\d.,\s-]+$/u, "").trim();
   if (textPart.length < 8 || textPart.length > 80) return false;
   const alpha = textPart.match(/[a-zA-Z]/g);
@@ -231,7 +338,7 @@ const looksLikeAllCapsBranchLine = (line: string): boolean => {
  * Parses convenience-store style rows: product name, qty, unit price, line total.
  * Quantity and unit price are not part of the returned description.
  */
-const tryParseMultiColumnItemLine = (
+export const parseStoreLineItemFromText = (
   line: string,
 ): { description: string; amount: number } | null => {
   const m = MULTI_COLUMN_ITEM_TAIL.exec(line);
@@ -261,7 +368,7 @@ const tryParseMultiColumnItemLine = (
  * Strips a leading quantity number from item descriptions.
  * e.g. "1 Standard Buffet" → "Standard Buffet"
  */
-const stripLeadingQty = (desc: string): string =>
+export const stripLeadingQty = (desc: string): string =>
   desc.replace(/^\d+\s+/, "").trim();
 
 /**
@@ -291,20 +398,13 @@ export const parseReceiptText = (
     .map((l) => normalizeOcrReceiptLine(l.trim()))
     .filter(Boolean);
 
-  const merchantName =
-    lines.find(
-      (l) =>
-        hasLetters(l) &&
-        l.length > 3 &&
-        !/^\d{2}[./\-]/.test(l) && // skip date-like lines
-        !/^\d+$/.test(l), // skip pure number lines
-    ) ?? null;
+  const merchantName = pickMerchantNameFromReceiptLines(lines);
 
-  // Find the grand total — take the first matching TOTAL line
+  // Find the grand total — first matching TOTAL line (largest plausible amount on noisy OCR).
   let total: number | null = null;
   for (const line of lines) {
     if (TOTAL_LINE_PATTERNS.some((re) => re.test(line))) {
-      const amount = extractTrailingAmount(line);
+      const amount = extractGrandTotalFromSummaryLine(line);
       if (amount && amount > 0) {
         total = amount;
         break;
@@ -352,9 +452,21 @@ export const parseReceiptText = (
       continue;
     }
 
+    const voucherDiscount = pickVoucherDiscountFromLine(
+      line,
+      items[items.length - 1]?.amount ?? null,
+    );
+    if (voucherDiscount !== null) {
+      const prev = items[items.length - 1];
+      if (prev) {
+        prev.amount = Math.max(0, Math.round(prev.amount - voucherDiscount));
+      }
+      continue;
+    }
+
     if (!hasLetters(line)) continue;
 
-    const multi = tryParseMultiColumnItemLine(line);
+    const multi = parseStoreLineItemFromText(line);
     if (multi) {
       items.push({
         category: categoryForEntries,
@@ -381,11 +493,14 @@ export const parseReceiptText = (
 
   if (items.length > 0) {
     // When total differs from subtotal (taxes / service charges exist), scale
-    // each item's amount proportionally so they sum to the grand total.
+    // each item only if line items already approximate the pre-tax subtotal (avoid corrupting mart receipts).
     if (subtotal && total && Math.abs(total - subtotal) > 0.01) {
-      const multiplier = total / subtotal;
-      for (const item of items) {
-        item.amount = Math.round(item.amount * multiplier);
+      const sumItems = items.reduce((s, i) => s + i.amount, 0);
+      if (sumItems > 0 && Math.abs(sumItems - subtotal) / subtotal < 0.14) {
+        const multiplier = total / subtotal;
+        for (const item of items) {
+          item.amount = Math.round(item.amount * multiplier);
+        }
       }
     }
 

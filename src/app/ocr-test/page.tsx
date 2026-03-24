@@ -4,9 +4,20 @@ import { useRef, useState } from "react";
 import type { ParsedReceipt } from "~/usecase/receipt/parse-receipt-text";
 import { formatAmount } from "~/utils/amount";
 
+type OcrQuality = {
+  meanWordConfidence: number;
+  pageConfidence: number;
+  psmUsed: string;
+  tesseractLineCount: number;
+  layoutRowCount: number;
+  imageWidth: number;
+  imageHeight: number;
+};
+
 type OcrResult = {
   ocrText: string;
   parsed: ParsedReceipt;
+  ocrQuality?: OcrQuality;
 };
 
 const OcrTestPage = () => {
@@ -155,73 +166,106 @@ const OcrTestPage = () => {
         )}
 
         {result && (
-          <div className="mt-8 grid gap-6 lg:grid-cols-2">
-            {/* Raw OCR text */}
-            <section className="flex flex-col gap-3">
-              <h2 className="text-sm font-semibold tracking-widest text-gray-500 uppercase">
-                Raw OCR Text
-              </h2>
-              <pre className="flex-1 overflow-auto rounded-xl bg-gray-900 p-4 text-xs leading-relaxed text-gray-300 ring-1 ring-gray-800">
-                {result.ocrText}
-              </pre>
-            </section>
-
-            {/* Parsed result */}
-            <section className="flex flex-col gap-3">
-              <h2 className="text-sm font-semibold tracking-widest text-gray-500 uppercase">
-                Parsed Result
-              </h2>
-              <div className="rounded-xl bg-gray-900 p-4 ring-1 ring-gray-800">
-                {result.parsed.merchantName && (
-                  <p className="mb-3 text-sm text-gray-400">
-                    Merchant:{" "}
-                    <span className="font-medium text-white">
-                      {result.parsed.merchantName}
-                    </span>
-                  </p>
-                )}
-
-                {result.parsed.entries.length > 0 ? (
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-800 text-left text-xs tracking-wider text-gray-500 uppercase">
-                        <th className="pr-4 pb-2">Item</th>
-                        <th className="pb-2 text-right">Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {result.parsed.entries.map((entry, i) => (
-                        <tr
-                          key={i}
-                          className="border-b border-gray-800/50 last:border-0"
-                        >
-                          <td className="py-2 pr-4 text-gray-200">
-                            {entry.description ?? "—"}
-                          </td>
-                          <td className="py-2 text-right font-mono text-gray-300">
-                            {formatAmount(entry.amount)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    {result.parsed.total !== null && (
-                      <tfoot>
-                        <tr className="border-t-2 border-gray-700">
-                          <td className="pt-3 font-semibold text-white">
-                            Total
-                          </td>
-                          <td className="pt-3 text-right font-mono font-semibold text-indigo-400">
-                            {formatAmount(result.parsed.total)}
-                          </td>
-                        </tr>
-                      </tfoot>
-                    )}
-                  </table>
-                ) : (
-                  <p className="text-sm text-gray-500">No items extracted.</p>
-                )}
+          <div className="mt-8 space-y-4">
+            {result.ocrQuality && (
+              <div className="flex flex-wrap gap-4 rounded-xl border border-gray-800 bg-gray-900/80 px-4 py-3 text-xs text-gray-400">
+                <span>
+                  Word avg / page:{" "}
+                  <strong className="text-gray-200">
+                    {result.ocrQuality.meanWordConfidence}% /{" "}
+                    {result.ocrQuality.pageConfidence}%
+                  </strong>
+                </span>
+                <span>
+                  PSM:{" "}
+                  <strong className="text-gray-200">
+                    {result.ocrQuality.psmUsed}
+                  </strong>
+                </span>
+                <span>
+                  Lines (Tesseract / layout):{" "}
+                  <strong className="text-gray-200">
+                    {result.ocrQuality.tesseractLineCount} /{" "}
+                    {result.ocrQuality.layoutRowCount}
+                  </strong>
+                </span>
+                <span>
+                  Image:{" "}
+                  <strong className="text-gray-200">
+                    {result.ocrQuality.imageWidth}×
+                    {result.ocrQuality.imageHeight}px
+                  </strong>
+                </span>
               </div>
-            </section>
+            )}
+            <div className="grid gap-6 lg:grid-cols-2">
+              {/* Raw OCR text */}
+              <section className="flex flex-col gap-3">
+                <h2 className="text-sm font-semibold tracking-widest text-gray-500 uppercase">
+                  Raw OCR Text
+                </h2>
+                <pre className="flex-1 overflow-auto rounded-xl bg-gray-900 p-4 text-xs leading-relaxed text-gray-300 ring-1 ring-gray-800">
+                  {result.ocrText}
+                </pre>
+              </section>
+
+              {/* Parsed result */}
+              <section className="flex flex-col gap-3">
+                <h2 className="text-sm font-semibold tracking-widest text-gray-500 uppercase">
+                  Parsed Result
+                </h2>
+                <div className="rounded-xl bg-gray-900 p-4 ring-1 ring-gray-800">
+                  {result.parsed.merchantName && (
+                    <p className="mb-3 text-sm text-gray-400">
+                      Merchant:{" "}
+                      <span className="font-medium text-white">
+                        {result.parsed.merchantName}
+                      </span>
+                    </p>
+                  )}
+
+                  {result.parsed.entries.length > 0 ? (
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-800 text-left text-xs tracking-wider text-gray-500 uppercase">
+                          <th className="pr-4 pb-2">Item</th>
+                          <th className="pb-2 text-right">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {result.parsed.entries.map((entry, i) => (
+                          <tr
+                            key={i}
+                            className="border-b border-gray-800/50 last:border-0"
+                          >
+                            <td className="py-2 pr-4 text-gray-200">
+                              {entry.description ?? "—"}
+                            </td>
+                            <td className="py-2 text-right font-mono text-gray-300">
+                              {formatAmount(entry.amount)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      {result.parsed.total !== null && (
+                        <tfoot>
+                          <tr className="border-t-2 border-gray-700">
+                            <td className="pt-3 font-semibold text-white">
+                              Total
+                            </td>
+                            <td className="pt-3 text-right font-mono font-semibold text-indigo-400">
+                              {formatAmount(result.parsed.total)}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      )}
+                    </table>
+                  ) : (
+                    <p className="text-sm text-gray-500">No items extracted.</p>
+                  )}
+                </div>
+              </section>
+            </div>
           </div>
         )}
       </div>

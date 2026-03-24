@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ocrFromBuffer } from "~/usecase/receipt/ocr-receipt";
-import { parseReceiptText } from "~/usecase/receipt/parse-receipt-text";
+import { parseReceiptWords } from "~/usecase/receipt/parse-receipt-words";
+import { clusterWordsIntoLayoutRows } from "~/usecase/receipt/receipt-layout";
 
 export const POST = async (req: Request) => {
   const form = await req.formData();
@@ -12,8 +13,24 @@ export const POST = async (req: Request) => {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const ocrText = await ocrFromBuffer(buffer);
-  const parsed = parseReceiptText(ocrText, category);
+  const ocrResult = await ocrFromBuffer(buffer);
+  const parsed = parseReceiptWords(ocrResult, category);
 
-  return NextResponse.json({ ocrText, parsed });
+  const layoutRows = clusterWordsIntoLayoutRows(
+    ocrResult.lines.flatMap((l) => l.words),
+  );
+
+  return NextResponse.json({
+    ocrText: ocrResult.text,
+    parsed,
+    ocrQuality: {
+      meanWordConfidence: Math.round(ocrResult.meanWordConfidence * 10) / 10,
+      pageConfidence: Math.round(ocrResult.pageConfidence * 10) / 10,
+      psmUsed: ocrResult.psmUsed,
+      tesseractLineCount: ocrResult.lines.length,
+      layoutRowCount: layoutRows.length,
+      imageWidth: ocrResult.imageWidth,
+      imageHeight: ocrResult.imageHeight,
+    },
+  });
 };

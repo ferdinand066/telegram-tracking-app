@@ -2,7 +2,7 @@ import type { NextFunction } from "grammy";
 import { InlineKeyboard } from "grammy";
 import type { AppContext } from "~/lib/bot-context";
 import { ocrReceiptFromFileId } from "~/usecase/receipt/ocr-receipt";
-import { parseReceiptText } from "~/usecase/receipt/parse-receipt-text";
+import { parseReceiptWords } from "~/usecase/receipt/parse-receipt-words";
 import { pendingReceiptPhotoStore } from "~/store/pending-receipt-photo.store";
 import { pendingReceiptStore } from "~/store/pending-receipt.store";
 import { formatAmount } from "~/utils/amount";
@@ -53,8 +53,8 @@ export const handleReceiptPhoto = async (
   await ctx.reply("On process, please wait...");
 
   try {
-    const ocrText = await ocrReceiptFromFileId(fileId);
-    const parsed = parseReceiptText(ocrText, pending.category);
+    const ocrResult = await ocrReceiptFromFileId(fileId);
+    const parsed = parseReceiptWords(ocrResult, pending.category);
 
     pendingReceiptPhotoStore.delete(ctx.user.id);
 
