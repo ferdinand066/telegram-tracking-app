@@ -6,7 +6,7 @@ const HomeLink = () => {
   return (
     <Link
       href="/"
-      className="text-sm text-indigo-400 underline-offset-4 transition hover:text-indigo-300 hover:underline"
+      className="text-primary hover:text-primary/80 text-sm underline-offset-4 transition hover:underline"
     >
       ← Back to home
     </Link>

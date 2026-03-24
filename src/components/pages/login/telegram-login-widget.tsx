@@ -1,23 +1,16 @@
 "use client";
 
-import { AlertCircleIcon, Send } from "lucide-react";
+import { AlertCircleIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
+import { Card, CardContent } from "~/components/ui/card";
 import { cn } from "~/lib/utils";
 
-const alertDark =
-  "border-red-800/80 bg-red-950/40 text-red-200 [&_[data-slot=alert-title]]:text-red-100 [&_[data-slot=alert-description]]:text-red-300/95 [&_svg]:text-red-400";
+const alertStyles =
+  "border-destructive/30 bg-destructive/10 text-foreground [&_[data-slot=alert-title]]:text-foreground [&_[data-slot=alert-description]]:text-muted-foreground [&_svg]:text-destructive";
 
 /** Matches Telegram’s login widget embed (e.g. `telegram-widget.js?23`). */
 const TELEGRAM_WIDGET_SCRIPT_SRC =
@@ -115,41 +108,18 @@ export function TelegramLoginWidget({
   return (
     <Card
       className={cn(
-        "w-full max-w-md border-0 bg-gray-900 shadow-none ring-1 ring-gray-800",
-        "text-gray-100",
+        "bg-card ring-border w-full max-w-md border-0 p-0 shadow-none ring-1",
+        "text-card-foreground",
       )}
     >
-      <CardHeader className="gap-2 pb-2">
-        <div className="flex items-center gap-2">
-          <span className="flex size-9 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-400 ring-1 ring-indigo-500/25">
-            <Send className="size-4" aria-hidden />
-          </span>
-          <div>
-            <CardTitle className="font-heading text-lg font-semibold text-white">
-              Telegram
-            </CardTitle>
-            <CardDescription className="text-xs text-gray-500">
-              Official login widget
-            </CardDescription>
-          </div>
-        </div>
-        <p className="pt-1 text-sm leading-relaxed text-gray-400">
-          Tap the button below to authorize in Telegram. Your domain must match
-          what you set with{" "}
-          <code className="rounded bg-gray-950 px-1.5 py-0.5 font-mono text-[0.7rem] text-indigo-300 ring-1 ring-gray-800">
-            /setdomain
-          </code>{" "}
-          in BotFather.
-        </p>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4 pt-2">
+      <CardContent className="flex flex-col gap-4 p-0">
         {!botUsername ? (
-          <Alert variant="destructive" className={alertDark}>
+          <Alert variant="destructive" className={alertStyles}>
             <AlertCircleIcon />
             <AlertTitle>Bot username not configured</AlertTitle>
             <AlertDescription>
               Set{" "}
-              <code className="rounded bg-gray-950/80 px-1 py-0.5 font-mono text-xs text-gray-200 ring-1 ring-gray-800">
+              <code className="bg-muted text-muted-foreground ring-border rounded px-1 py-0.5 font-mono text-xs ring-1">
                 TELEGRAM_BOT_USERNAME
               </code>{" "}
               on the server to your bot name (no @), then restart the app.
@@ -158,7 +128,7 @@ export function TelegramLoginWidget({
         ) : (
           <>
             {error ? (
-              <Alert variant="destructive" className={alertDark}>
+              <Alert variant="destructive" className={alertStyles}>
                 <AlertCircleIcon />
                 <AlertTitle>Sign-in failed</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
@@ -166,8 +136,8 @@ export function TelegramLoginWidget({
             ) : null}
             <div
               className={cn(
-                "flex min-h-[44px] items-center justify-center rounded-xl border border-dashed border-gray-700 bg-gray-950/60 px-4 py-6 transition",
-                "hover:border-indigo-500/50 hover:bg-gray-950/80",
+                "bg-background/60 border-border flex min-h-[44px] items-center justify-center rounded-xl border border-dashed px-4 py-6 transition",
+                "hover:border-ring/60 hover:bg-background/80",
                 "[&_iframe]:max-w-full [&_iframe]:rounded-md",
               )}
               aria-busy={isSubmitting}
@@ -175,23 +145,13 @@ export function TelegramLoginWidget({
               <div ref={containerRef} className="flex justify-center" />
             </div>
             {isSubmitting ? (
-              <p className="text-center text-sm text-gray-500">
+              <p className="text-muted-foreground text-center text-sm">
                 Completing sign-in…
               </p>
             ) : null}
           </>
         )}
       </CardContent>
-      <CardFooter className="border-t border-gray-800 bg-gray-950/40 px-4 py-3 sm:px-6">
-        <p className="text-center text-xs leading-relaxed text-gray-500 sm:text-left">
-          If you see &quot;Bot domain invalid&quot;, open BotFather → your bot →
-          Bot Settings → Domain and add this site&apos;s origin (e.g.{" "}
-          <code className="rounded bg-gray-900 px-1 py-px font-mono text-[0.65rem] text-gray-400">
-            localhost
-          </code>{" "}
-          for local dev).
-        </p>
-      </CardFooter>
     </Card>
   );
 }

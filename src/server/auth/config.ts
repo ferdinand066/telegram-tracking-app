@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import DiscordProvider from "next-auth/providers/discord";
 
 import { env } from "~/env.js";
+import { getDevLoginUserUseCase } from "~/usecase/auth/get-dev-login-user.usecase";
 
 import {
   isTelegramAuthDateValid,
@@ -87,6 +88,33 @@ export const authConfig = {
           id: `telegram:${id}`,
           name,
           image: photo_url ?? undefined,
+        };
+      },
+    }),
+    Credentials({
+      id: "dev-username",
+      name: "Development Username",
+      credentials: {
+        username: { label: "Username", type: "text" },
+      },
+      async authorize(credentials) {
+        if (env.NODE_ENV === "production") {
+          return null;
+        }
+
+        const username = credentialString(credentials?.username)?.trim();
+        if (!username) {
+          return null;
+        }
+
+        const user = await getDevLoginUserUseCase(username);
+        if (!user) {
+          return null;
+        }
+
+        return {
+          id: `dev:${user.id}`,
+          name: user.username ?? user.first_name ?? username,
         };
       },
     }),

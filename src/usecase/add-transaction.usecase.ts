@@ -1,6 +1,7 @@
 import type { FundSource } from "~/lib/supabase/model";
 import { fundSourceRepository } from "~/repository/fund-source.repository";
 import { transactionRepository } from "~/repository/transaction.repository";
+import type { TransactionType } from "~/schema/manage/transaction.schema";
 import { formatCategoryTitleCase } from "~/utils/category";
 
 export type TransactionEntry = {
@@ -8,14 +9,6 @@ export type TransactionEntry = {
   description: string | null;
   amount: number;
 };
-
-export const TRANSACTION_TYPE = {
-  INCOME: 1,
-  EXPENSE: -1,
-} as const;
-
-export type TransactionType =
-  (typeof TRANSACTION_TYPE)[keyof typeof TRANSACTION_TYPE];
 
 type AddTransactionInput = {
   userId: number;

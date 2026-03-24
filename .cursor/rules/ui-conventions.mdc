@@ -1,0 +1,38 @@
+---
+description: UI conventions — mobile-first, RHF forms, TanStack Query invalidation, theme color tokens
+globs: src/{app,components,styles}/**
+alwaysApply: false
+---
+
+# UI Conventions
+
+## Mobile First
+
+- Build all UI with a mobile-first approach.
+- Start from small screens first, then scale up with responsive breakpoints.
+- Do not design desktop-first and then patch mobile later.
+
+## Forms and Data Update
+
+- All forms must use `react-hook-form`.
+- If a form updates data, submit via a mutation flow (`useMutation`) instead of direct inline fetch calls.
+- Keep validation and submit handling inside the form layer with clear input schemas when applicable.
+
+## Data Management
+
+- Use TanStack Query for server data management (read/write state from API).
+- After successful mutations, invalidate related queries so stale data is refreshed.
+- Define clear query keys and reuse them consistently for fetching and invalidation.
+
+## UI Color Consistency
+
+- For UI colors, use semantic tokens only: `primary-color`, `accent-color`, `success-color`, and `destructive-color`.
+- Avoid hardcoded/explicit color choices when semantic tokens can represent the intent.
+- Prioritize reusable design tokens over one-off color values.
+
+## Modularity for Components and Pages
+
+- Make all components and pages as modular as possible.
+- Keep each file focused on one responsibility and extract reusable UI/logic into smaller components, hooks, and utilities.
+- Avoid large page/component files that mix rendering, business logic, and data access concerns.
+- Prefer composition over monolithic components so features are easier to test, maintain, and extend.

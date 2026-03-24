@@ -1,12 +1,10 @@
 import type { AppContext } from "~/lib/bot-context";
-import type {
-  TransactionEntry,
-  TransactionType,
-} from "~/usecase/add-transaction.usecase";
 import {
-  addTransactionUseCase,
   TRANSACTION_TYPE,
-} from "~/usecase/add-transaction.usecase";
+  type TransactionType,
+} from "~/schema/manage/transaction.schema";
+import type { TransactionEntry } from "~/usecase/add-transaction.usecase";
+import { addTransactionUseCase } from "~/usecase/add-transaction.usecase";
 import { parseAmount } from "~/utils/amount";
 import { parseHumanReadableDate } from "~/utils/date";
 import { formatTransactionReply } from "~/utils/format-transaction-reply";

@@ -5,6 +5,8 @@ import type { Database } from "~/lib/supabase/types";
 
 type CreateFundSourcePayload =
   Database["public"]["Tables"]["fund_sources"]["Insert"];
+type UpdateFundSourcePayload =
+  Database["public"]["Tables"]["fund_sources"]["Update"];
 
 export const fundSourceRepository = {
   async getActiveByName(userId: number, name: string) {
@@ -30,7 +32,41 @@ export const fundSourceRepository = {
   },
 
   async create(payload: CreateFundSourcePayload) {
-    const { error } = await supabaseServer.from("fund_sources").insert(payload);
+    const { data, error } = await supabaseServer
+      .from("fund_sources")
+      .insert(payload)
+      .select()
+      .single();
     if (error) throw error;
+    return data satisfies FundSource;
+  },
+
+  async findByUserId(userId: number): Promise<FundSource[]> {
+    const { data, error } = await supabaseServer
+      .from("fund_sources")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+    return (data ?? []) as FundSource[];
+  },
+
+  async updateById(
+    userId: number,
+    fundSourceId: string,
+    payload: UpdateFundSourcePayload,
+  ): Promise<FundSource> {
+    const { data, error } = await supabaseServer
+      .from("fund_sources")
+      .update(payload)
+      .eq("user_id", userId)
+      .eq("id", fundSourceId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data satisfies FundSource;
   },
 };

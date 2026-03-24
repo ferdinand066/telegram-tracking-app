@@ -3,6 +3,30 @@ import type { User } from "~/lib/supabase/model";
 import { supabaseServer } from "~/lib/supabase/server";
 
 export const userRepository = {
+  async findByUsername(username: string) {
+    const normalizedUsername = username.trim();
+    if (!normalizedUsername) {
+      return null;
+    }
+
+    const { data, error } = await supabaseServer
+      .from("users")
+      .select()
+      .eq("username", normalizedUsername)
+      .maybeSingle();
+
+    if (error) {
+      console.error("userRepository.findByUsername error:", error);
+      return null;
+    }
+
+    if (!data) {
+      return null;
+    }
+
+    return data satisfies User;
+  },
+
   async upsert(
     telegramId: number,
     username: string | undefined,

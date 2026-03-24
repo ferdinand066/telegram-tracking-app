@@ -2,11 +2,12 @@ import { type Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
-import { TelegramLoginWidget } from "~/components/auth/telegram-login-widget";
+import { DevUsernameLoginWidget } from "~/components/pages/login/dev-username-login-widget";
+import { TelegramLoginWidget } from "~/components/pages/login/telegram-login-widget";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { env } from "~/env";
 import { auth } from "~/server/auth";
-import HomeLink from "./components/home-link";
+import HomeLink from "../../components/pages/login/home-link";
 
 export const metadata: Metadata = {
   title: "Sign in · Fund Tracker",
@@ -15,12 +16,12 @@ export const metadata: Metadata = {
 
 function LoginLoading() {
   return (
-    <Card className="w-full max-w-md animate-pulse border-0 bg-gray-900 shadow-none ring-1 ring-gray-800">
+    <Card className="bg-card ring-border w-full max-w-md animate-pulse border-0 shadow-none ring-1">
       <CardHeader className="gap-3">
-        <div className="h-7 w-40 rounded-md bg-gray-800" />
-        <div className="h-10 w-full rounded-md bg-gray-800/80" />
+        <div className="bg-muted h-7 w-40 rounded-md" />
+        <div className="bg-muted/80 h-10 w-full rounded-md" />
       </CardHeader>
-      <CardContent className="min-h-32 rounded-lg bg-gray-950/50 ring-1 ring-gray-800" />
+      <CardContent className="bg-background/60 ring-border min-h-32 rounded-lg ring-1" />
     </Card>
   );
 }
@@ -31,22 +32,28 @@ export default async function LoginPage() {
     redirect("/");
   }
 
+  const isDevelopmentMode = env.NODE_ENV !== "production";
   const botUsername = env.TELEGRAM_BOT_USERNAME ?? "";
 
   return (
-    <main className="min-h-screen bg-gray-950 text-gray-100">
+    <main className="bg-background text-foreground min-h-screen">
       <div className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-4 py-12">
         <div className="mb-8 text-center sm:text-left">
-          <h1 className="text-2xl font-bold text-white">Sign in</h1>
-          <p className="mt-1 text-sm text-gray-400">
-            Use Telegram to access your fund tracker. Same bot you chat with for
-            receipts and balances.
+          <h1 className="text-foreground text-2xl font-bold">Sign in</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {isDevelopmentMode
+              ? "Development mode: sign in with username only."
+              : "Use Telegram to access your fund tracker. Same bot you chat with for receipts and balances."}
           </p>
         </div>
 
-        <Suspense fallback={<LoginLoading />}>
-          <TelegramLoginWidget botUsername={botUsername} />
-        </Suspense>
+        {isDevelopmentMode ? (
+          <DevUsernameLoginWidget />
+        ) : (
+          <Suspense fallback={<LoginLoading />}>
+            <TelegramLoginWidget botUsername={botUsername} />
+          </Suspense>
+        )}
 
         <div className="mt-8 flex justify-center sm:justify-start">
           <HomeLink />

@@ -1,11 +1,9 @@
 import type { Filter } from "grammy";
 import type { AppContext } from "~/lib/bot-context";
-import {
-  addTransactionUseCase,
-  TRANSACTION_TYPE,
-} from "~/usecase/add-transaction.usecase";
+import { addTransactionUseCase } from "~/usecase/add-transaction.usecase";
 import { pendingReceiptStore } from "~/store/pending-receipt.store";
 import { formatTransactionReply } from "~/utils/format-transaction-reply";
+import { TRANSACTION_TYPE } from "~/schema/manage/transaction.schema";
 
 type CallbackCtx = Filter<AppContext, "callback_query:data">;
 
