@@ -25,10 +25,17 @@ export const handleReceiptCommand = async (ctx: AppContext) => {
   const photo = ctx.message?.photo;
   if (!photo?.length) return ctx.reply(USAGE_MESSAGE);
 
-  // ctx.match contains everything after "/receipt" in the caption.
-  // It is typed as string | RegExpMatchArray; for bot.command() it is always a string.
-  const matchText =
+  // For text commands, grammy sets ctx.match to the text after "/receipt".
+  // For photo+caption commands, grammy does NOT set ctx.match, so we parse
+  // the caption directly as a fallback.
+  const captionAfterCommand =
+    /^\/receipt(?:@\w+)?\s*([\s\S]*)$/i.exec(
+      ctx.message?.caption ?? "",
+    )?.[1]?.trim() ?? "";
+
+  const rawMatch =
     typeof ctx.match === "string" ? ctx.match : (ctx.match?.[0] ?? "");
+  const matchText = rawMatch.trim() || captionAfterCommand;
 
   const headerLine = matchText
     .split("\n")
