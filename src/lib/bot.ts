@@ -13,8 +13,12 @@ import {
 import { handleBalanceCommand } from "~/usecase/bot/handle-balance-command";
 import { handleHistoryCommand } from "~/usecase/bot/handle-history-command";
 import { handleFallbackMessage } from "~/usecase/bot/handle-fallback-message";
-import { handleReceiptConfirmation } from "~/usecase/bot/handle-receipt-confirmation";
 import { handleReceiptCommand } from "~/usecase/bot/handle-receipt-command";
+import { handleReceiptPhoto } from "~/usecase/bot/handle-receipt-photo";
+import {
+  handleReceiptConfirmYes,
+  handleReceiptConfirmNo,
+} from "~/usecase/bot/handle-receipt-confirmation";
 
 export const bot = new Bot<AppContext>(env.TELEGRAM_BOT_TOKEN);
 
@@ -38,13 +42,8 @@ bot.command("balance", handleBalanceCommand);
 bot.command("history", handleHistoryCommand);
 
 bot.command("receipt", handleReceiptCommand);
-// bot.on("message:photo", async (ctx, next) => {
-//   const caption = ctx.message.caption ?? "";
-//   if (/^\/receipt(?:@\w+)?(\s|$)/i.test(caption)) {
-//     return handleReceiptCommand(ctx);
-//   }
-//   return next();
-// });
-bot.on("message:text", handleReceiptConfirmation);
+bot.callbackQuery("receipt:confirm", handleReceiptConfirmYes);
+bot.callbackQuery("receipt:cancel", handleReceiptConfirmNo);
 
+bot.on("message:photo", handleReceiptPhoto);
 bot.on("message", handleFallbackMessage);

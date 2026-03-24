@@ -3,6 +3,7 @@ import type { TransactionEntry } from "~/usecase/add-transaction.usecase";
 export type PendingReceipt = {
   dateStr: string;
   sourceName: string;
+  category: string;
   entries: TransactionEntry[];
   telegramMessageId: number | null;
 };

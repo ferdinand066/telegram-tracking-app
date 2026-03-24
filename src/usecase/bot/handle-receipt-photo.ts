@@ -1,0 +1,74 @@
+import type { NextFunction } from "grammy";
+import { InlineKeyboard } from "grammy";
+import type { AppContext } from "~/lib/bot-context";
+import { ocrReceiptFromFileId } from "~/usecase/receipt/ocr-receipt";
+import { parseReceiptText } from "~/usecase/receipt/parse-receipt-text";
+import { pendingReceiptPhotoStore } from "~/store/pending-receipt-photo.store";
+import { pendingReceiptStore } from "~/store/pending-receipt.store";
+import { formatAmount } from "~/utils/amount";
+import dayjs from "dayjs";
+import { HUMAN_READABLE_DATE_FORMATS } from "~/utils/date";
+
+const RECEIPT_CONFIRM_KEYBOARD = new InlineKeyboard()
+  .text("Yes", "receipt:confirm")
+  .text("No", "receipt:cancel");
+
+export const handleReceiptPhoto = async (
+  ctx: AppContext,
+  next: NextFunction,
+) => {
+  if (!ctx.user) return next();
+
+  const pending = pendingReceiptPhotoStore.get(ctx.user.id);
+  if (!pending) return next();
+
+  const photo = ctx.message?.photo;
+  if (!photo?.length) return next();
+
+  pendingReceiptPhotoStore.delete(ctx.user.id);
+
+  await ctx.reply("On process, please wait...");
+
+  try {
+    const fileId = photo.at(-1)!.file_id;
+    const ocrText = await ocrReceiptFromFileId(fileId);
+    const parsed = parseReceiptText(ocrText, pending.category);
+
+    if (parsed.entries.length === 0) {
+      return ctx.reply(
+        "Could not extract any items from the receipt.\nPlease try again or use /expense to enter it manually.",
+      );
+    }
+
+    pendingReceiptStore.set(ctx.user.id, {
+      dateStr: pending.dateStr,
+      sourceName: pending.sourceName,
+      category: pending.category,
+      entries: parsed.entries,
+      telegramMessageId: ctx.message?.message_id ?? null,
+    });
+
+    const date = dayjs(pending.dateStr).format(
+      HUMAN_READABLE_DATE_FORMATS.DAY_MONTH_YEAR,
+    );
+
+    const lines: string[] = [
+      `${date} - ${pending.category} - ${pending.sourceName}`,
+      ...parsed.entries.map(
+        (e) => `${e.description ?? "Item"} - ${formatAmount(e.amount)}`,
+      ),
+      "",
+      "Save?",
+    ];
+
+    return ctx.reply(lines.join("\n"), {
+      reply_markup: RECEIPT_CONFIRM_KEYBOARD,
+    });
+  } catch (err) {
+    return ctx.reply(
+      err instanceof Error
+        ? err.message
+        : "Failed to process receipt. Please try again.",
+    );
+  }
+};
